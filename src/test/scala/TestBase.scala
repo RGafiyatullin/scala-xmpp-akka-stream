@@ -4,11 +4,12 @@ import org.scalatest.{FlatSpec, Matchers}
 import org.scalatest.concurrent.ScalaFutures
 import org.scalatest.time.{Milliseconds, Seconds, Span}
 
-import scala.concurrent.Future
+import scala.concurrent.{Await, Future}
+import scala.concurrent.duration._
 
 trait TestBase extends FlatSpec with Matchers with ScalaFutures {
   override implicit def patienceConfig: PatienceConfig =
-    PatienceConfig(Span(5, Seconds), Span(100, Milliseconds))
+    PatienceConfig(Span(100, Milliseconds), Span(10, Milliseconds))
 
   def withActorSystem[T](f: ActorSystem => Future[T]): Future[T] = {
     val actorSystem = ActorSystem()
@@ -26,7 +27,7 @@ trait TestBase extends FlatSpec with Matchers with ScalaFutures {
     }
 
   def futureOk[T](f: Future[T]): Future[T] = {
-    whenReady(f)(identity)
+    val _ = Await.result(f, 1.second)
     f
   }
 }

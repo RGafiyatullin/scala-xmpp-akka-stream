@@ -14,7 +14,7 @@ scalacOptions ++= Seq("-Ywarn-value-discard", "-Xfatal-warnings")
 
 libraryDependencies ++= Seq(
   "org.scalatest"                 %% "scalatest"      % "3.0.4",
-  "com.github.rgafiyatullin"      %% "xml"            % "0.2.0.2",
+  "com.github.rgafiyatullin"      %% "xml"            % "0.2.0.3",
   "com.github.rgafiyatullin"      %% "xmpp-protocol"  % "0.4.0.2",
   "com.typesafe.akka"             %% "akka-stream"    % "2.5.7"
 )
