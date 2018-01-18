@@ -17,31 +17,27 @@ sealed abstract class Utf8Decode extends GraphStage[FlowShape[ByteString, String
   override def createLogic(inheritedAttributes: Attributes): GraphStageLogic =
     new GraphStageLogic(shape) {
       var outputBuffer: StringBuilder = StringBuilder.newBuilder
-      var itemRequested: Boolean = false
       var decoder: Utf8InputStream = Utf8InputStream.empty
 
-      def flushOutput(): Unit = {
-        require(itemRequested)
-        if (outputBuffer.nonEmpty) {
+      def maybePush(): Boolean =
+        if (isAvailable(outlet)) {
+          if (outputBuffer.nonEmpty) {
+            push(outlet, outputBuffer.mkString)
+            outputBuffer = StringBuilder.newBuilder
+            false
+          }
+          else true
+        } else false
 
-          push(outlet, outputBuffer.mkString)
-
-          itemRequested = false
-          outputBuffer = StringBuilder.newBuilder
-        }
-      }
-
-      def requestItem(): Unit = {
+      def maybePull(): Unit =
         if (!hasBeenPulled(inlet))
           pull(inlet)
-        itemRequested = true
-      }
 
-      def bytesAvailable(bs: ByteString): Unit =
-        bytesAvailableLoop(bs)
+      def feedDecoder(bs: ByteString): Unit =
+        feedDecoderLoop(bs)
 
       @tailrec
-      def bytesAvailableLoop(bs: ByteString): Unit =
+      def feedDecoderLoop(bs: ByteString): Unit =
         bs.headOption.flatMap(
           decoder.in(_).map(_.out) match {
             case Left(utf8Error) =>
@@ -57,21 +53,18 @@ sealed abstract class Utf8Decode extends GraphStage[FlowShape[ByteString, String
           }
         ) match {
           case None => ()
-          case Some(tail) => bytesAvailableLoop(tail)
+          case Some(tail) => feedDecoderLoop(tail)
         }
 
       setHandler(inlet, new InHandler {
         override def onPush(): Unit = {
-          bytesAvailable(grab(inlet))
-          if (itemRequested)
-            flushOutput()
+          feedDecoder(grab(inlet))
+          if (maybePush()) maybePull()
         }
       })
       setHandler(outlet, new OutHandler {
-        override def onPull(): Unit = {
-          requestItem()
-          flushOutput()
-        }
+        override def onPull(): Unit =
+          if (maybePush()) maybePull()
       })
     }
 }
