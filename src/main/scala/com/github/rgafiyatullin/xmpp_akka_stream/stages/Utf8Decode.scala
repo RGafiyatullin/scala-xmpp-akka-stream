@@ -6,9 +6,10 @@ import akka.util.ByteString
 import com.github.rgafiyatullin.xml.utf8.Utf8InputStream
 
 import scala.annotation.tailrec
-import scala.collection.immutable.Queue
 
-case object Utf8Decode extends GraphStage[FlowShape[ByteString, String]] {
+case object Utf8Decode extends Utf8Decode
+
+sealed abstract class Utf8Decode extends GraphStage[FlowShape[ByteString, String]] {
   val inlet: Inlet[ByteString] = Inlet("In:ByteString")
   val outlet: Outlet[String] = Outlet("Out:String")
   override def shape: FlowShape[ByteString, String] = FlowShape.of(inlet, outlet)

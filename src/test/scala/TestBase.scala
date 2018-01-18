@@ -6,7 +6,7 @@ import org.scalatest.time.{Milliseconds, Seconds, Span}
 
 import scala.concurrent.Future
 
-class TestBase extends FlatSpec with Matchers with ScalaFutures {
+trait TestBase extends FlatSpec with Matchers with ScalaFutures {
   override implicit def patienceConfig: PatienceConfig =
     PatienceConfig(Span(5, Seconds), Span(100, Milliseconds))
 

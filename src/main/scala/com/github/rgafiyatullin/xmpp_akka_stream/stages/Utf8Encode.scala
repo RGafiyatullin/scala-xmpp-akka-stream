@@ -6,7 +6,9 @@ import akka.stream.{Attributes, FlowShape, Inlet, Outlet}
 import akka.stream.stage.{GraphStage, GraphStageLogic, InHandler, OutHandler}
 import akka.util.ByteString
 
-case object Utf8Encode extends GraphStage[FlowShape[String, ByteString]] {
+case object Utf8Encode extends Utf8Encode
+
+sealed abstract class Utf8Encode extends GraphStage[FlowShape[String, ByteString]] {
   val csUtf8: Charset = Charset.forName("UTF-8")
   val inlet: Inlet[String] = Inlet("In:String")
   val outlet: Outlet[ByteString] = Outlet("Out:ByteString")

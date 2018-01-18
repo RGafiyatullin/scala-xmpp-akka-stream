@@ -4,10 +4,9 @@ import akka.stream.scaladsl.Source
 import akka.util.ByteString
 import com.github.rgafiyatullin.xmpp_akka_stream.stages.{Utf8Decode, Utf8Encode}
 
-final class Playground extends TestBase {
+final class Utf8CodecTest extends TestBase {
 
-
-  "utf8encode" should "work" in
+  "Utf8Encode" should "work" in
     withMaterializer { mat =>
       futureOk {
         val strings = (1 to 100).map(_.toString).toList
@@ -20,7 +19,7 @@ final class Playground extends TestBase {
       }
     }
 
-  "utf8decode" should "work #1" in
+  "Utf8Decode" should "work #1" in
     withMaterializer { mat =>
       futureOk {
         val strings = (1 to 100).map(_.toString).toList
