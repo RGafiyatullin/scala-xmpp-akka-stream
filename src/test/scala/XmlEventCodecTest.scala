@@ -18,6 +18,7 @@ final class XmlEventCodecTest extends TestBase {
       )),
       HighLevelEvent.ElementSelfClosing(ep, "streams", "features", "streams-namespace", Seq()),
       HighLevelEvent.ElementClose(ep, "streams", "stream", "streams-namespace"))
+
   val rendered: String =
     "<!--text-->" +
     "<?target content?>" +
