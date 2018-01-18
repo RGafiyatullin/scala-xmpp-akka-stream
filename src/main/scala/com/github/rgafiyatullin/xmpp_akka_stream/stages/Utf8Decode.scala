@@ -37,7 +37,7 @@ sealed abstract class Utf8Decode extends GraphStage[FlowShape[ByteString, String
         feedDecoderLoop(bs)
 
       @tailrec
-      def feedDecoderLoop(bs: ByteString): Unit =
+      private def feedDecoderLoop(bs: ByteString): Unit =
         bs.headOption.flatMap(
           decoder.in(_).map(_.out) match {
             case Left(utf8Error) =>

@@ -17,16 +17,36 @@ sealed abstract class Utf8Encode extends GraphStage[FlowShape[String, ByteString
 
   override def createLogic(inheritedAttributes: Attributes): GraphStageLogic =
     new GraphStageLogic(shape) {
+      var buffer: ByteString = ByteString.empty
+
+      def feedBuffer(s: String): Unit = {
+        val byteString = ByteString(s, csUtf8)
+        buffer = buffer ++ byteString
+      }
+
+      def maybePush(): Boolean =
+        if (isAvailable(outlet)) {
+          if (buffer.nonEmpty) {
+            push(outlet, buffer)
+            buffer = ByteString.empty
+            false
+          } else true
+        }
+        else false
+
+      def maybePull(): Unit =
+        if (!hasBeenPulled(inlet))
+          pull(inlet)
+
       setHandler(inlet, new InHandler {
         override def onPush(): Unit = {
-          val string = grab(inlet)
-          val byteString = ByteString(string, csUtf8)
-          push(outlet, byteString)
+          feedBuffer(grab(inlet))
+          if (maybePush()) maybePull()
         }
       })
       setHandler(outlet, new OutHandler {
         override def onPull(): Unit =
-          pull(inlet)
+          if (maybePush()) maybePull()
       })
     }
 }

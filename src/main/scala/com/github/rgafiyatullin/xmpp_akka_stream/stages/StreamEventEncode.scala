@@ -15,13 +15,13 @@ sealed abstract class StreamEventEncode extends GraphStage[FlowShape[StreamEvent
     FlowShape.of(inlet, outlet)
 
   override def createLogic(inheritedAttributes: Attributes): GraphStageLogic = new GraphStageLogic(shape) {
-    private var outputStream: OutputStream = OutputStream.empty
+    var outputStream: OutputStream = OutputStream.empty
 
-    private def maybePull(): Unit =
+    def maybePull(): Unit =
       if (!hasBeenPulled(inlet))
         pull(inlet)
 
-    private def maybePush(): Boolean =
+    def maybePush(): Boolean =
       outputStream.outSingleOption match {
         case None => true
         case Some((hle, outputStreamNext)) =>
@@ -30,7 +30,7 @@ sealed abstract class StreamEventEncode extends GraphStage[FlowShape[StreamEvent
           false
       }
 
-    private def feedOutputStream(se: StreamEvent): Unit =
+    def feedOutputStream(se: StreamEvent): Unit =
       outputStream = outputStream.in(se)
 
     setHandler(inlet, new InHandler {
