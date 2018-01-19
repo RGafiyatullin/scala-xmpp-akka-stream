@@ -1,7 +1,7 @@
 import akka.stream.scaladsl.Source
 import com.github.rgafiyatullin.xml.common.{Attribute, HighLevelEvent, Position, QName}
 import com.github.rgafiyatullin.xml.dom.{Element, Node}
-import com.github.rgafiyatullin.xmpp_akka_stream.stages.StreamEventEncode
+import com.github.rgafiyatullin.xmpp_akka_stream.stages.{StreamEventDecode, StreamEventEncode}
 import com.github.rgafiyatullin.xmpp_protocol.XmppConstants
 import com.github.rgafiyatullin.xmpp_protocol.streams.StreamEvent
 
@@ -33,6 +33,18 @@ final class StreamEventCodecTest extends TestBase {
             .runFold(Queue.empty[HighLevelEvent])(_.enqueue(_))(mat)
 
         futureXmlEvents.map(_.toList should be (xmlEvents))(mat.executionContext)
+      }
+    }
+
+  "StreamEventDecode" should "work" in
+    withMaterializer { mat =>
+      futureOk {
+        val futureStreamEvents =
+          Source(xmlEvents)
+            .via(StreamEventDecode)
+            .runFold(Queue.empty[StreamEvent])(_.enqueue(_))(mat)
+
+        futureStreamEvents.map(_.toList should be (streamEvents))(mat.executionContext)
       }
     }
 }

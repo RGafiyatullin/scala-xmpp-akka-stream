@@ -5,7 +5,7 @@ import akka.stream.stage.{GraphStage, GraphStageLogic, InHandler, OutHandler}
 import com.github.rgafiyatullin.xml.common.HighLevelEvent
 import com.github.rgafiyatullin.xml.stream_writer.high_level_writer.HighLevelWriter
 
-object XmlEventEncode extends XmlEventEncode
+case object XmlEventEncode extends XmlEventEncode
 
 sealed abstract class XmlEventEncode extends GraphStage[FlowShape[HighLevelEvent, String]] {
   val inlet: Inlet[HighLevelEvent] = Inlet("In:HighLevelEvent")

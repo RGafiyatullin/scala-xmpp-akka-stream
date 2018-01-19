@@ -7,7 +7,7 @@ import com.github.rgafiyatullin.xml.stream_parser.high_level_parser.{HighLevelPa
 import com.github.rgafiyatullin.xml.stream_parser.low_level_parser.LowLevelParserError
 import com.github.rgafiyatullin.xml.stream_parser.tokenizer.TokenizerError
 
-object XmlEventDecode extends XmlEventDecode
+case object XmlEventDecode extends XmlEventDecode
 
 abstract class XmlEventDecode extends GraphStage[FlowShape[String, HighLevelEvent]] {
   val inlet: Inlet[String] = Inlet("In:String")
