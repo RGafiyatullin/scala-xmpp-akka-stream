@@ -1,7 +1,7 @@
 import akka.stream.scaladsl.Source
 import com.github.rgafiyatullin.xml.common.{Attribute, HighLevelEvent, Position, QName}
 import com.github.rgafiyatullin.xml.dom.{Element, Node}
-import com.github.rgafiyatullin.xmpp_akka_stream.stages.{StreamEventDecode, StreamEventEncode}
+import com.github.rgafiyatullin.xmpp_akka_stream.codecs.StreamEventCodec
 import com.github.rgafiyatullin.xmpp_protocol.XmppConstants
 import com.github.rgafiyatullin.xmpp_protocol.streams.StreamEvent
 
@@ -29,7 +29,7 @@ final class StreamEventCodecTest extends TestBase {
       futureOk {
         val futureXmlEvents =
           Source(streamEvents)
-            .via(StreamEventEncode)
+            .via(StreamEventCodec.encode)
             .runFold(Queue.empty[HighLevelEvent])(_.enqueue(_))(mat)
 
         futureXmlEvents.map(_.toList should be (xmlEvents))(mat.executionContext)
@@ -41,7 +41,7 @@ final class StreamEventCodecTest extends TestBase {
       futureOk {
         val futureStreamEvents =
           Source(xmlEvents)
-            .via(StreamEventDecode)
+            .via(StreamEventCodec.decode)
             .runFold(Queue.empty[StreamEvent])(_.enqueue(_))(mat)
 
         futureStreamEvents.map(_.toList should be (streamEvents))(mat.executionContext)

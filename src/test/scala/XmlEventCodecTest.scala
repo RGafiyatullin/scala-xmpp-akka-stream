@@ -1,6 +1,6 @@
 import akka.stream.scaladsl.Source
 import com.github.rgafiyatullin.xml.common.{Attribute, HighLevelEvent, Position}
-import com.github.rgafiyatullin.xmpp_akka_stream.stages.{XmlEventDecode, XmlEventEncode}
+import com.github.rgafiyatullin.xmpp_akka_stream.codecs.XmlEventCodec
 
 import scala.collection.immutable.Queue
 
@@ -36,7 +36,7 @@ final class XmlEventCodecTest extends TestBase {
     withMaterializer { mat =>
       futureOk {
         Source(parsed)
-          .via(XmlEventEncode)
+          .via(XmlEventCodec.encode)
           .runReduce(_ ++ _)(mat)
           .map(_ should be (rendered))(mat.executionContext) } }
 
@@ -47,7 +47,7 @@ final class XmlEventCodecTest extends TestBase {
       futureOk {
         val futureEvents =
           Source(List(rendered))
-            .via(XmlEventDecode)
+            .via(XmlEventCodec.decode)
             .runFold(Queue.empty[HighLevelEvent])(_.enqueue(_))(mat)
         futureEvents.map(_.toList should be (parsed))(mat.executionContext)
       }
@@ -62,7 +62,7 @@ final class XmlEventCodecTest extends TestBase {
               .toCharArray
               .map { ch => new String(Array(ch)) }
               .toList)
-            .via(XmlEventDecode)
+            .via(XmlEventCodec.decode)
             .runFold(Queue.empty[HighLevelEvent])(_.enqueue(_))(mat)
         futureEvents.map(_.toList should be (parsed))(mat.executionContext)
       }

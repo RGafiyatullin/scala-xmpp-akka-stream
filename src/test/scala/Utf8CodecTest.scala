@@ -1,8 +1,12 @@
 import java.nio.charset.Charset
 
-import akka.stream.scaladsl.Source
-import akka.util.ByteString
-import com.github.rgafiyatullin.xmpp_akka_stream.stages.{Utf8Decode, Utf8Encode}
+import akka.stream.OverflowStrategy
+import akka.stream.scaladsl.{Keep, Sink, Source}
+import akka.util.{ByteString, Timeout}
+import com.github.rgafiyatullin.xmpp_akka_stream.codecs.Utf8Codec
+
+import scala.concurrent.duration._
+import scala.concurrent.{ExecutionContext, Future}
 
 final class Utf8CodecTest extends TestBase {
 
@@ -13,7 +17,7 @@ final class Utf8CodecTest extends TestBase {
         val byteStrings = strings.map(ByteString(_, Charset.forName("UTF-8")))
         val futureByteString =
           Source(strings)
-            .via(Utf8Encode)
+            .via(Utf8Codec.encode)
             .runReduce(_ ++ _)(mat)
         futureByteString.map(_ should be (byteStrings.reduce(_ ++ _)))(mat.executionContext)
       }
@@ -27,7 +31,7 @@ final class Utf8CodecTest extends TestBase {
 
         val futureString =
           Source(byteStrings)
-            .via(Utf8Decode)
+            .via(Utf8Codec.decode)
             .runReduce(_ + _)(mat)
 
         futureString.map(_ should be(strings.reduce(_ + _)))(mat.executionContext)
@@ -44,7 +48,7 @@ final class Utf8CodecTest extends TestBase {
 
       val futureString =
         Source(List(byteString))
-          .via(Utf8Decode)
+          .via(Utf8Codec.decode)
           .runReduce(_ + _)(mat)
 
       futureString.map(_ should be (strings.reduce(_ + _)))(mat.executionContext)
@@ -61,8 +65,9 @@ final class Utf8CodecTest extends TestBase {
 
         val futureString =
           Source(for (byte <- byteString) yield ByteString(Array(byte)))
-            .via(Utf8Decode)
-            .runReduce(_ + _)(mat)
+            .via(Utf8Codec.decode)
+            .toMat(Sink.reduce[String](_ + _))(Keep.right)
+            .run()(mat)
 
         futureString.map(_ should be (strings.reduce(_ + _)))(mat.executionContext)
       }
