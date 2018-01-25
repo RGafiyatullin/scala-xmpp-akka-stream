@@ -1,12 +1,8 @@
 import java.nio.charset.Charset
 
-import akka.stream.OverflowStrategy
 import akka.stream.scaladsl.{Keep, Sink, Source}
-import akka.util.{ByteString, Timeout}
+import akka.util.ByteString
 import com.github.rgafiyatullin.xmpp_akka_stream.codecs.Utf8Codec
-
-import scala.concurrent.duration._
-import scala.concurrent.{ExecutionContext, Future}
 
 final class Utf8CodecTest extends TestBase {
 
@@ -18,7 +14,9 @@ final class Utf8CodecTest extends TestBase {
         val futureByteString =
           Source(strings)
             .via(Utf8Codec.encode)
-            .runReduce(_ ++ _)(mat)
+            .toMat(Sink.reduce[ByteString](_ ++ _))(Keep.right)
+            .run()(mat)
+
         futureByteString.map(_ should be (byteStrings.reduce(_ ++ _)))(mat.executionContext)
       }
     }

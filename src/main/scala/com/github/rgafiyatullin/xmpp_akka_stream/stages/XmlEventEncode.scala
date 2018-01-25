@@ -1,9 +1,11 @@
 package com.github.rgafiyatullin.xmpp_akka_stream.stages
 
-import akka.actor.ActorRef
+import akka.Done
+import akka.actor.{ActorRef, Status}
 import akka.stream._
 import akka.stream.stage._
-import com.github.rgafiyatullin.xml.common.HighLevelEvent
+import akka.util.Timeout
+import com.github.rgafiyatullin.xml.common.{HighLevelEvent, Position}
 import com.github.rgafiyatullin.xml.stream_writer.high_level_writer.HighLevelWriter
 
 import scala.concurrent.{Future, Promise}
@@ -11,13 +13,23 @@ import scala.concurrent.{Future, Promise}
 object XmlEventEncode {
   type StageShape = FlowShape[HighLevelEvent, String]
 
-  final class Api(actorRef: ActorRef)
+  final class Api(actorRef: ActorRef) {
+    import akka.pattern.ask
+    def reset()(implicit timeout: Timeout): Future[Done] =
+      actorRef.ask(Api.Reset()).mapTo[Done]
+  }
+  private object Api {
+    final case class Reset()
+  }
 
   private final class Logic(stage: Graph[StageShape, _], apiPromise: Promise[Api]) extends GraphStageLogic(stage.shape) {
     val inlet: Inlet[HighLevelEvent] = stage.shape.in
     val outlet: Outlet[String] = stage.shape.out
 
-    var writer: HighLevelWriter = HighLevelWriter.empty
+    val emptyWriter: HighLevelWriter =
+      HighLevelWriter.empty
+
+    var writer: HighLevelWriter = emptyWriter
 
     def feedWriter(hle: HighLevelEvent): Unit =
       writer = writer.in(hle)
@@ -37,7 +49,12 @@ object XmlEventEncode {
       if (!hasBeenPulled(inlet))
         pull(inlet)
 
-    def receive(sender: ActorRef, message: Any): Unit = ()
+    def receive(sender: ActorRef, message: Any): Unit =
+      message match {
+        case Api.Reset =>
+          writer = emptyWriter
+          sender ! Status.Success(Done)
+      }
 
     override def preStart(): Unit = {
       super.preStart()
@@ -59,8 +76,8 @@ object XmlEventEncode {
 }
 
 final case class XmlEventEncode() extends GraphStageWithMaterializedValue[XmlEventEncode.StageShape, Future[XmlEventEncode.Api]] {
-  val inlet: Inlet[HighLevelEvent] = Inlet("In:HighLevelEvent")
-  val outlet: Outlet[String] = Outlet("Out:HighLevelEvent")
+  val inlet: Inlet[HighLevelEvent] = Inlet("XmlEventEncode.In")
+  val outlet: Outlet[String] = Outlet("XmlEventEncode.Out")
 
   override def shape: XmlEventEncode.StageShape = FlowShape.of(inlet, outlet)
 

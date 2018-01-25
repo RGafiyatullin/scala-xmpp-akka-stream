@@ -78,9 +78,11 @@ object Utf8Decode {
   }
 }
 
+
+
 final case class Utf8Decode() extends GraphStageWithMaterializedValue[Utf8Decode.StageShape, Future[Utf8Decode.Api]] {
-  val inlet: Inlet[ByteString] = Inlet("In:ByteString")
-  val outlet: Outlet[String] = Outlet("Out:String")
+  val inlet: Inlet[ByteString] = Inlet("Utf8Decode.In")
+  val outlet: Outlet[String] = Outlet("Utf8Decode.Out")
   override def shape: FlowShape[ByteString, String] = FlowShape.of(inlet, outlet)
 
   override def createLogicAndMaterializedValue(inheritedAttributes: Attributes): (GraphStageLogic, Future[Utf8Decode.Api]) = {

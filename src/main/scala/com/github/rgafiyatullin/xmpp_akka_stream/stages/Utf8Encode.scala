@@ -61,8 +61,8 @@ object Utf8Encode {
 }
 
 final case class Utf8Encode() extends GraphStageWithMaterializedValue[Utf8Encode.StageShape, Future[Utf8Encode.Api]] {
-  val inlet: Inlet[String] = Inlet("In:String")
-  val outlet: Outlet[ByteString] = Outlet("Out:ByteString")
+  val inlet: Inlet[String] = Inlet("Utf8Encode.In")
+  val outlet: Outlet[ByteString] = Outlet("Utf8Encode.Out")
 
   override def shape: Utf8Encode.StageShape= FlowShape.of(inlet, outlet)
 

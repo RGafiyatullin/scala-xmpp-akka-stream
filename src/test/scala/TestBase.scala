@@ -27,7 +27,7 @@ trait TestBase extends FlatSpec with Matchers with ScalaFutures {
     }
 
   def futureOk[T](f: Future[T]): Future[T] = {
-    val _ = Await.result(f, 1.second)
+    val _ = Await.result(f, 5.seconds)
     f
   }
 }
