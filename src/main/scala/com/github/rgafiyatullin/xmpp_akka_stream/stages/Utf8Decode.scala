@@ -66,6 +66,7 @@ object Utf8Decode {
     }
 
     setHandler(inlet, new InHandler {
+
       override def onPush(): Unit = {
         feedDecoder(grab(inlet))
         if (maybePush()) maybePull()
