@@ -1,11 +1,11 @@
-package com.github.rgafiyatullin.xmpp_akka_stream.stages
+package com.github.rgafiyatullin.xmpp_akka_stream.stages.mutable
 
 import akka.Done
 import akka.actor.{ActorRef, Status}
 import akka.stream._
 import akka.stream.stage._
 import akka.util.Timeout
-import com.github.rgafiyatullin.xml.common.{HighLevelEvent, Position}
+import com.github.rgafiyatullin.xml.common.HighLevelEvent
 import com.github.rgafiyatullin.xml.stream_writer.high_level_writer.HighLevelWriter
 
 import scala.concurrent.{Future, Promise}

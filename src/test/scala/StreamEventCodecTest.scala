@@ -1,3 +1,5 @@
+import akka.event.Logging
+import akka.stream.Attributes
 import akka.stream.scaladsl.Source
 import com.github.rgafiyatullin.xml.common.{Attribute, HighLevelEvent, Position, QName}
 import com.github.rgafiyatullin.xml.dom.{Element, Node}
@@ -12,19 +14,31 @@ final class StreamEventCodecTest extends TestBase {
 
   val qnStream: QName = XmppConstants.names.streams.stream
   val qnIQ: QName = XmppConstants.names.jabber.client.iq
+  val qnBody: QName = XmppConstants.names.jabber.iq.roster.query
   val attrNsImportJC: Attribute = Attribute.NsImport("", qnIQ.ns)
+  val attrNsImportJCR: Attribute = Attribute.NsImport("", qnBody.ns)
   val attrNsImportStreams: Attribute = Attribute.NsImport("streams", qnStream.ns)
 
-  val aStanza: Node = Element(qnIQ, Seq(attrNsImportJC), Seq.empty)
+  val aStanza: Node = Element(qnIQ, Seq(attrNsImportJC), Seq(
+    Element(qnBody, Seq(attrNsImportJCR), Seq.empty)
+  ))
+  val aStanzaNoImports: Node = Element(qnIQ, Seq(), Seq(
+    Element(qnBody, Seq(), Seq.empty)
+  ))
 
   val streamEvents: List[StreamEvent] = List(
     StreamEvent.StreamOpen(Seq(attrNsImportStreams)),
     StreamEvent.Stanza(aStanza))
+  val streamEventsNoImports: List[StreamEvent] = List(
+    StreamEvent.StreamOpen(Seq(attrNsImportStreams)),
+    StreamEvent.Stanza(aStanzaNoImports))
   val xmlEvents: List[HighLevelEvent] = List(
     HighLevelEvent.ElementOpen(ep, "streams", qnStream.localName, qnStream.ns, Seq( attrNsImportStreams)),
-    HighLevelEvent.ElementSelfClosing(ep, "", qnIQ.localName, qnIQ.ns, Seq(attrNsImportJC)))
+    HighLevelEvent.ElementOpen(ep, "", qnIQ.localName, qnIQ.ns, Seq(attrNsImportJC)),
+    HighLevelEvent.ElementSelfClosing(ep, "", qnBody.localName, qnBody.ns, Seq(attrNsImportJCR)),
+    HighLevelEvent.ElementClose(ep, "", qnIQ.localName, qnIQ.ns))
 
-  "StreamEventEncode" should "work" in
+  "StreamEventEncode" should "work #1" in
     withMaterializer{ mat =>
       futureOk {
         val futureXmlEvents =
@@ -44,7 +58,7 @@ final class StreamEventCodecTest extends TestBase {
             .via(StreamEventCodec.decode)
             .runFold(Queue.empty[StreamEvent])(_.enqueue(_))(mat)
 
-        futureStreamEvents.map(_.toList should be (streamEvents))(mat.executionContext)
+        futureStreamEvents.map(_.toList should be (streamEventsNoImports))(mat.executionContext)
       }
     }
 }

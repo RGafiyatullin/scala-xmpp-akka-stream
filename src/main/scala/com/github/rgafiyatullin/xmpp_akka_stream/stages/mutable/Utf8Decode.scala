@@ -1,4 +1,4 @@
-package com.github.rgafiyatullin.xmpp_akka_stream.stages
+package com.github.rgafiyatullin.xmpp_akka_stream.stages.mutable
 
 import akka.actor.ActorRef
 import akka.stream._

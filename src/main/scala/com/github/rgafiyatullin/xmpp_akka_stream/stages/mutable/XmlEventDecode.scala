@@ -1,4 +1,4 @@
-package com.github.rgafiyatullin.xmpp_akka_stream.stages
+package com.github.rgafiyatullin.xmpp_akka_stream.stages.mutable
 
 import akka.Done
 import akka.actor.{ActorRef, Status}
