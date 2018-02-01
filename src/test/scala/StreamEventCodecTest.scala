@@ -1,13 +1,16 @@
-import akka.event.Logging
-import akka.stream.Attributes
-import akka.stream.scaladsl.Source
+
+import akka.stream.{OverflowStrategy, QueueOfferResult}
+import akka.stream.scaladsl.{Keep, Sink, Source}
 import com.github.rgafiyatullin.xml.common.{Attribute, HighLevelEvent, Position, QName}
 import com.github.rgafiyatullin.xml.dom.{Element, Node}
 import com.github.rgafiyatullin.xmpp_akka_stream.codecs.StreamEventCodec
 import com.github.rgafiyatullin.xmpp_protocol.XmppConstants
+import com.github.rgafiyatullin.xmpp_protocol.stream_error.XmppStreamError
 import com.github.rgafiyatullin.xmpp_protocol.streams.StreamEvent
 
+import scala.concurrent.duration._
 import scala.collection.immutable.Queue
+import scala.concurrent.ExecutionContext
 
 final class StreamEventCodecTest extends TestBase {
   val ep: Position = Position.withoutPosition
@@ -59,6 +62,86 @@ final class StreamEventCodecTest extends TestBase {
             .runFold(Queue.empty[StreamEvent])(_.enqueue(_))(mat)
 
         futureStreamEvents.map(_.toList should be (streamEventsNoImports))(mat.executionContext)
+      }
+    }
+
+  it should "fail on stream re-open when hasn't been reset" in
+    withMaterializer { implicit mat =>
+      futureOk {
+        implicit val ec: ExecutionContext = mat.executionContext
+
+        val streamOpenEvent = HighLevelEvent.ElementOpen(ep, "", qnStream.localName, qnStream.ns, Seq.empty)
+
+        val ((srcQ, sedApiFut), snkQ) =
+          Source.queue[HighLevelEvent](1, OverflowStrategy.fail)
+            .viaMat(StreamEventCodec.decode)(Keep.both)
+            .toMat(Sink.queue())(Keep.both)
+            .run()
+
+        for {
+          sedApi <- sedApiFut
+          _ <- srcQ.offer(streamOpenEvent).map(_ should be(QueueOfferResult.Enqueued))
+          _ <- snkQ.pull().map(_ should contain(StreamEvent.StreamOpen(Seq())))
+          _ <- srcQ.offer(streamOpenEvent).map(_ should be(QueueOfferResult.Enqueued))
+          _ <- snkQ.pull().map(_ should matchPattern {
+            case Some(StreamEvent.StreamError(_: XmppStreamError.InvalidXml)) => })
+          _ <- snkQ.pull().failed.map(_ shouldBe an[XmppStreamError.InvalidXml])
+        }
+          yield ()
+      }
+    }
+
+  it should "not fail on stream re-open when has been reset" in
+    withMaterializer { implicit mat =>
+      futureOk {
+        implicit val ec: ExecutionContext = mat.executionContext
+
+        val streamOpenEvent = HighLevelEvent.ElementOpen(ep, "", qnStream.localName, qnStream.ns, Seq.empty)
+
+        val ((srcQ, sedApiFut), snkQ) =
+          Source.queue[HighLevelEvent](1, OverflowStrategy.fail)
+            .viaMat(StreamEventCodec.decode)(Keep.both)
+            .toMat(Sink.queue())(Keep.both)
+            .run()
+
+        for {
+          sedApi <- sedApiFut
+          _ <- srcQ.offer(streamOpenEvent).map(_ should be(QueueOfferResult.Enqueued))
+          _ <- snkQ.pull().map(_ should contain(StreamEvent.StreamOpen(Seq())))
+          _ <- sedApi.reset()(100.millis)
+          _ <- srcQ.offer(streamOpenEvent).map(_ should be(QueueOfferResult.Enqueued))
+          _ <- snkQ.pull().map(_ should contain(StreamEvent.StreamOpen(Seq())))
+          _ = srcQ.complete()
+          _ <- snkQ.pull().map(_ shouldBe empty)
+        }
+          yield ()
+      }
+    }
+
+
+  it should "complete on stream-close event" in
+    withMaterializer { implicit mat =>
+      futureOk {
+        implicit val ec: ExecutionContext = mat.executionContext
+
+        val streamOpenEvent = HighLevelEvent.ElementOpen(ep, "", qnStream.localName, qnStream.ns, Seq.empty)
+        val streamCloseEvent = HighLevelEvent.ElementClose(ep, "", qnStream.localName, qnStream.ns)
+
+        val ((srcQ, sedApiFut), snkQ) =
+          Source.queue[HighLevelEvent](1, OverflowStrategy.fail)
+            .viaMat(StreamEventCodec.decode)(Keep.both)
+            .toMat(Sink.queue())(Keep.both)
+            .run()
+
+        for {
+          sedApi <- sedApiFut
+          _ <- srcQ.offer(streamOpenEvent).map(_ should be(QueueOfferResult.Enqueued))
+          _ <- snkQ.pull().map(_ should contain(StreamEvent.StreamOpen(Seq())))
+          _ <- srcQ.offer(streamCloseEvent).map(_ should be(QueueOfferResult.Enqueued))
+          _ <- snkQ.pull().map(_ should contain (StreamEvent.StreamClose()))
+          _ <- snkQ.pull().map(_ shouldBe empty)
+        }
+          yield ()
       }
     }
 }
