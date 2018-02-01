@@ -48,7 +48,7 @@ final case class XmlEventEncode() extends Stage[XmlEventEncode] {
   override def shape: Shape = FlowShape.of(XmlEventEncode.inlet, XmlEventEncode.outlet)
 
   override def initialStateAndMatValue
-    (logic: GraphStageLogic, inheritedAttributes: Attributes)
+    (logic: Stage.RunnerLogic, inheritedAttributes: Attributes)
   : (XmlEventEncode.State, MaterializedValue) =
     (XmlEventEncode.State.empty, NotUsed)
 }

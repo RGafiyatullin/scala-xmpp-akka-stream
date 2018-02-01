@@ -90,7 +90,8 @@ final case class StreamEventDecode() extends Stage[StreamEventDecode] {
     FlowShape.of(StreamEventDecode.inlet, StreamEventDecode.outlet)
 
   override def initialStateAndMatValue
-    (logic: GraphStageLogic, inheritedAttributes: Attributes)
+    (logic: Stage.RunnerLogic,
+     inheritedAttributes: Attributes)
   : (StreamEventDecode.State, MaterializedValue) =
     (StreamEventDecode.State.empty, NotUsed)
 }

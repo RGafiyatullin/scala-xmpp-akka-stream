@@ -1,16 +1,18 @@
 package com.github.rgafiyatullin.xmpp_akka_stream.stages.functional
 
-import akka.NotUsed
-import akka.stream.stage.GraphStageLogic
+import akka.Done
+import akka.actor.{ActorRef, Status}
 import akka.stream.{Attributes, FlowShape, Inlet, Outlet}
+import akka.util.Timeout
 import com.github.rgafiyatullin.akka_stream_util.custom_stream_stage.Stage
-import com.github.rgafiyatullin.akka_stream_util.custom_stream_stage.contexts.{InletFailedContext, InletFinishedContext, InletPushedContext, OutletPulledContext}
+import com.github.rgafiyatullin.akka_stream_util.custom_stream_stage.contexts._
 import com.github.rgafiyatullin.xml.common.HighLevelEvent
 import com.github.rgafiyatullin.xml.stream_parser.high_level_parser.{HighLevelParser, HighLevelParserError}
 import com.github.rgafiyatullin.xml.stream_parser.low_level_parser.LowLevelParserError
 import com.github.rgafiyatullin.xml.stream_parser.tokenizer.TokenizerError
 import com.github.rgafiyatullin.xmpp_akka_stream.stages.functional.XmlEventDecode.MaterializedValue
 
+import scala.concurrent.{ExecutionContext, Future, Promise}
 import scala.util.Try
 
 object XmlEventDecode {
@@ -18,12 +20,23 @@ object XmlEventDecode {
   val outlet: Outlet[HighLevelEvent] = Outlet("XmlEventDecode.Out")
 
   type Shape = FlowShape[String, HighLevelEvent]
-  type MaterializedValue = NotUsed
+  type MaterializedValue = Future[Api]
+
+  private object messages {
+    case object Reset
+  }
+
+  final class Api(actorRef: ActorRef, executionContext: ExecutionContext) {
+    import akka.pattern.ask
+    def reset()(implicit timeout: Timeout): Future[Done] =
+      actorRef.ask(messages.Reset).mapTo[Done]
+  }
 
   object State {
-    def emptyHLP: HighLevelParser = HighLevelParser.empty.withoutPosition
+    def emptyHLP: HighLevelParser =
+      HighLevelParser.empty.withoutPosition
 
-    def empty: State = StateNormal()
+    def create(apiPromise: Promise[Api]): State = StateInitial(apiPromise)
   }
 
   sealed trait State extends Stage.State[XmlEventDecode] {
@@ -43,6 +56,23 @@ object XmlEventDecode {
         }
         .get
   }
+
+  final case class StateInitial(apiPromise: Promise[Api]) extends State {
+    override def hlp: HighLevelParser = throw new IllegalStateException("Stage not yet initialized")
+
+    override def receiveEnabled: Boolean = true
+
+    override def preStart(ctx: PreStartContext[XmlEventDecode]): PreStartContext[XmlEventDecode] = {
+      apiPromise.success(new Api(ctx.stageActorRef, ctx.executionContext))
+      ctx.withState(StateNormal())
+    }
+
+    override def postStop(ctx: PostStopContext[XmlEventDecode]): PostStopContext[XmlEventDecode] = {
+      apiPromise.tryFailure(new UninitializedError())
+      ctx
+    }
+  }
+
 
   final case class StateInletClosed(hlp: HighLevelParser, failureOption: Option[Throwable]) extends State {
     def withHLP(hlpNext: HighLevelParser): StateInletClosed =
@@ -64,6 +94,9 @@ object XmlEventDecode {
   }
 
   final case class StateNormal(hlp: HighLevelParser = State.emptyHLP) extends State {
+    def reset: StateNormal =
+      withHLP(State.emptyHLP)
+
     def withHLP(hlpNext: HighLevelParser): StateNormal =
       copy(hlp = hlpNext)
 
@@ -78,6 +111,14 @@ object XmlEventDecode {
 
     def hasPendingHLEs: Boolean =
       hlpOut.isDefined
+
+    override def receive(ctx: ReceiveContext.NotReplied[XmlEventDecode]): ReceiveContext[XmlEventDecode] =
+      ctx.handleWith {
+        case messages.Reset =>
+          ctx
+            .withState(reset)
+            .reply(Status.Success(Done))
+      }
 
     override def inletOnUpstreamFinish(ctx: InletFinishedContext[XmlEventDecode]): InletFinishedContext[XmlEventDecode] =
       if (hasPendingHLEs) ctx.withState(StateInletClosed(hlp, None))
@@ -131,7 +172,11 @@ final case class XmlEventDecode() extends Stage[XmlEventDecode] {
     FlowShape.of(XmlEventDecode.inlet, XmlEventDecode.outlet)
 
   override def initialStateAndMatValue
-    (logic: GraphStageLogic, inheritedAttributes: Attributes)
-  : (XmlEventDecode.State, MaterializedValue) =
-    (XmlEventDecode.State.empty, NotUsed)
+    (logic: Stage.RunnerLogic,
+     inheritedAttributes: Attributes)
+  : (XmlEventDecode.State, MaterializedValue) = {
+    val apiPromise = Promise[XmlEventDecode.Api]()
+    val state = XmlEventDecode.State.create(apiPromise)
+    (state, apiPromise.future)
+  }
 }

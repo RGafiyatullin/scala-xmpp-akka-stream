@@ -1,8 +1,12 @@
-import akka.stream.scaladsl.Source
+import akka.stream.{OverflowStrategy, QueueOfferResult}
+import akka.stream.scaladsl.{Keep, Sink, Source}
 import com.github.rgafiyatullin.xml.common.{Attribute, HighLevelEvent, Position}
+import com.github.rgafiyatullin.xml.stream_parser.high_level_parser.HighLevelParserError
 import com.github.rgafiyatullin.xmpp_akka_stream.codecs.XmlEventCodec
 
 import scala.collection.immutable.Queue
+import scala.concurrent.ExecutionContext
+import scala.concurrent.duration._
 
 final class XmlEventCodecTest extends TestBase {
   val ep: Position = Position.withoutPosition
@@ -40,8 +44,6 @@ final class XmlEventCodecTest extends TestBase {
           .runReduce(_ ++ _)(mat)
           .map(_ should be (rendered))(mat.executionContext) } }
 
-
-
   "XmlEventDecode" should "work #1" in
     withMaterializer { mat =>
       futureOk {
@@ -50,6 +52,44 @@ final class XmlEventCodecTest extends TestBase {
             .via(XmlEventCodec.decode)
             .runFold(Queue.empty[HighLevelEvent])(_.enqueue(_))(mat)
         futureEvents.map(_.toList should be (parsed))(mat.executionContext)
+      }
+    }
+
+  it should "not fail on using previously imported prefix" in
+    withMaterializer { mat =>
+      futureOk {
+        Source(List("<prefix:local-name xmlns:prefix='namespace'><prefix:local-name>"))
+          .via(XmlEventCodec.decode)
+          .runFold(Queue.empty[HighLevelEvent])(_.enqueue(_))(mat)
+          .map(_ should be (Seq(
+            HighLevelEvent.ElementOpen(ep, "prefix", "local-name", "namespace", Seq(Attribute.NsImport("prefix", "namespace"))),
+            HighLevelEvent.ElementOpen(ep, "prefix", "local-name", "namespace", Seq.empty)
+          )))(mat.executionContext)
+      }
+    }
+
+  it should "fail on using previously imported prefix when reset in between" in
+    withMaterializer { mat =>
+      implicit val ec: ExecutionContext = mat.executionContext
+      futureOk {
+        val ((srcQ, xedApiFut), snkQ) =
+          Source.queue[String](1, OverflowStrategy.fail)
+            .viaMat(XmlEventCodec.decode)(Keep.both)
+            .toMat(Sink.queue[HighLevelEvent]())(Keep.both)
+            .run()(mat)
+
+        for {
+          xedApi <- xedApiFut
+          _ <- srcQ.offer("<prefix:local-name xmlns:prefix='namespace'>").map(_ should be (QueueOfferResult.Enqueued))
+          _ <- snkQ.pull()
+            .map(_ should contain ( HighLevelEvent.ElementOpen(
+              ep, "prefix", "local-name", "namespace",
+              Seq(Attribute.NsImport("prefix", "namespace"))) ))
+          _ <- xedApi.reset()(100.millis)
+          _ <- srcQ.offer("<prefix:local-name>")
+          _ <- snkQ.pull().failed.map(_ shouldBe an[HighLevelParserError])
+        }
+          yield ()
       }
     }
 

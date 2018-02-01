@@ -48,7 +48,7 @@ final case class Utf8Encode() extends Stage[Utf8Encode] {
     FlowShape.of(Utf8Encode.inlet, Utf8Encode.outlet)
 
   override def initialStateAndMatValue(
-    logic: GraphStageLogic,
+    logic: Stage.RunnerLogic,
     inheritedAttributes: Attributes)
   : (Utf8Encode.State, Utf8Encode.MaterializedValue) =
     (Utf8Encode.State.empty, NotUsed)
