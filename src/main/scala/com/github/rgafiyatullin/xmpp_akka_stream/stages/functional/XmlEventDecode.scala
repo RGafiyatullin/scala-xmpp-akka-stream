@@ -49,8 +49,8 @@ object XmlEventDecode {
           // Here we are matching a buffer underrun as thrown by the HighLevelParser
           // TODO: custom matcher in order to continue parsing from the state it's been thrown
           case HighLevelParserError.LowLevel(
-          _, LowLevelParserError.TokError(
-          _, TokenizerError.InputBufferUnderrun(_)))
+                _, LowLevelParserError.TokError(
+                _, TokenizerError.InputBufferUnderrun(_)))
           =>
             None
         }
