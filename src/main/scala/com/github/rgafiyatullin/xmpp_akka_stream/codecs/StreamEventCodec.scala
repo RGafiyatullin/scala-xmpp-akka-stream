@@ -10,6 +10,15 @@ object StreamEventCodec {
   type EncoderMat = StreamEventEncode.MaterializedValue
   type DecoderMat = StreamEventDecode.MaterializedValue
 
+  /**
+    * Shape: Flow[StreamEvent, HighLevelEvent]
+    * Mat-Value: NotUsed
+    */
   val encode: GraphStageWithMaterializedValue[EncoderShape, EncoderMat] = StreamEventEncode().toGraph
+
+  /**
+    * Shape: Flow[HighLevelEvent, StreamEvent]
+    * Mat-Value: Future[StreamEventDecode.Api]
+    */
   val decode: GraphStageWithMaterializedValue[DecoderShape, DecoderMat] = StreamEventDecode().toGraph
 }

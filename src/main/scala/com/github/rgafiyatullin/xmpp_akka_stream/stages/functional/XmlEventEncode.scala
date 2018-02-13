@@ -1,19 +1,19 @@
 package com.github.rgafiyatullin.xmpp_akka_stream.stages.functional
 
 import akka.NotUsed
-import akka.stream.stage.GraphStageLogic
 import akka.stream.{Attributes, FlowShape, Inlet, Outlet}
 import com.github.rgafiyatullin.akka_stream_util.custom_stream_stage.Stage
 import com.github.rgafiyatullin.akka_stream_util.custom_stream_stage.contexts.{InletPushedContext, OutletPulledContext}
-import com.github.rgafiyatullin.xml.common.HighLevelEvent
 import com.github.rgafiyatullin.xml.stream_writer.high_level_writer.HighLevelWriter
+import com.github.rgafiyatullin.xmpp_akka_stream.codecs.XmlEventCodec
 import com.github.rgafiyatullin.xmpp_akka_stream.stages.functional.XmlEventEncode.MaterializedValue
 
 object XmlEventEncode {
+  type XmlEvent = XmlEventCodec.XmlEvent
   type MaterializedValue = NotUsed
-  type Shape = FlowShape[HighLevelEvent, String]
+  type Shape = FlowShape[XmlEvent, String]
 
-  val inlet: Inlet[HighLevelEvent] = Inlet("XmlEventEncode.In")
+  val inlet: Inlet[XmlEvent] = Inlet("XmlEventEncode.In")
   val outlet: Outlet[String] = Outlet("XmlEventEncode.Out")
 
   object State {

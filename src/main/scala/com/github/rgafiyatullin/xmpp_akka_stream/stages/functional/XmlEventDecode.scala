@@ -6,20 +6,21 @@ import akka.stream.{Attributes, FlowShape, Inlet, Outlet}
 import akka.util.Timeout
 import com.github.rgafiyatullin.akka_stream_util.custom_stream_stage.Stage
 import com.github.rgafiyatullin.akka_stream_util.custom_stream_stage.contexts._
-import com.github.rgafiyatullin.xml.common.HighLevelEvent
 import com.github.rgafiyatullin.xml.stream_parser.high_level_parser.{HighLevelParser, HighLevelParserError}
 import com.github.rgafiyatullin.xml.stream_parser.low_level_parser.LowLevelParserError
 import com.github.rgafiyatullin.xml.stream_parser.tokenizer.TokenizerError
+import com.github.rgafiyatullin.xmpp_akka_stream.codecs.XmlEventCodec
 import com.github.rgafiyatullin.xmpp_akka_stream.stages.functional.XmlEventDecode.MaterializedValue
 
 import scala.concurrent.{ExecutionContext, Future, Promise}
 import scala.util.Try
 
 object XmlEventDecode {
+  type XmlEvent = XmlEventCodec.XmlEvent
   val inlet: Inlet[String] = Inlet("XmlEventDecode.In")
-  val outlet: Outlet[HighLevelEvent] = Outlet("XmlEventDecode.Out")
+  val outlet: Outlet[XmlEvent] = Outlet("XmlEventDecode.Out")
 
-  type Shape = FlowShape[String, HighLevelEvent]
+  type Shape = FlowShape[String, XmlEvent]
   type MaterializedValue = Future[Api]
 
   private object messages {
@@ -42,7 +43,7 @@ object XmlEventDecode {
   sealed trait State extends Stage.State[XmlEventDecode] {
     def hlp: HighLevelParser
 
-    def hlpOut: Option[(HighLevelEvent, HighLevelParser)] =
+    def hlpOut: Option[(XmlEvent, HighLevelParser)] =
       Try(hlp.out)
         .map(Some(_))
         .recover {
@@ -103,7 +104,7 @@ object XmlEventDecode {
     def feedHLP(input: String): StateNormal =
       withHLP(hlp.in(input))
 
-    def withHLPOutOption: Option[(HighLevelEvent, StateNormal)] =
+    def withHLPOutOption: Option[(XmlEvent, StateNormal)] =
       hlpOut
         .map { case (hle, hlpNext) =>
           (hle, withHLP(hlpNext))
