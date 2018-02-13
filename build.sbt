@@ -2,13 +2,18 @@ name := "xmpp-akka-stream"
 
 organization := "com.github.rgafiyatullin"
 
-version := "0.1.2.0"
+version := "0.1.3.0"
 
 scalaVersion := "2.12.4"
 
 scalacOptions ++= Seq("-unchecked", "-deprecation", "-feature")
 scalacOptions ++= Seq("-language:implicitConversions")
 scalacOptions ++= Seq("-Ywarn-value-discard", "-Xfatal-warnings")
+
+publishTo := {
+  Some("releases"  at "https://artifactory.wgdp.io:443/xmppcs-maven-releases/")
+}
+credentials += Credentials(Path.userHome / ".ivy2" / ".credentials.wg-domain")
 
 
 
