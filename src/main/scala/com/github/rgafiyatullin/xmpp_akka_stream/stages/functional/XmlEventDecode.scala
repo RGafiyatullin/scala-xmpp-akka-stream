@@ -35,7 +35,7 @@ object XmlEventDecode {
 
   object State {
     def emptyHLP: HighLevelParser =
-      HighLevelParser.empty.withoutPosition
+      HighLevelParser.empty.withoutPosition.registerPrefix("xml", "__XML__")
 
     def create(apiPromise: Promise[Api]): State = StateInitial(apiPromise)
   }

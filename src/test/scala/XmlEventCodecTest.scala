@@ -23,6 +23,20 @@ final class XmlEventCodecTest extends TestBase {
       HighLevelEvent.ElementSelfClosing(ep, "streams", "features", "streams-namespace", Seq()),
       HighLevelEvent.ElementClose(ep, "streams", "stream", "streams-namespace"))
 
+  val parsedWithXmlLangAttr: List[HighLevelEvent] =
+    List(
+      HighLevelEvent.Comment(ep, "text"),
+      HighLevelEvent.ProcessingInstrutcion(ep, "target", "content"),
+      HighLevelEvent.ElementOpen(ep, "streams", "stream", "streams-namespace", Seq(
+        Attribute.NsImport("streams", "streams-namespace"),
+        Attribute.NsImport("", "jabber:client"),
+        Attribute.Unprefixed("to", "im.&localhost"),
+        Attribute.Prefixed("streams", "local-name", "value&"),
+        Attribute.Prefixed("xml", "lang", "en")
+      )),
+      HighLevelEvent.ElementSelfClosing(ep, "streams", "features", "streams-namespace", Seq()),
+      HighLevelEvent.ElementClose(ep, "streams", "stream", "streams-namespace"))
+
   val rendered: String =
     "<!--text-->" +
     "<?target content?>" +
@@ -35,6 +49,21 @@ final class XmlEventCodecTest extends TestBase {
     "<streams:features" +
     "/>" +
     "</streams:stream>"
+
+  val renderedWithXmlLangAttr: String =
+    "<!--text-->" +
+      "<?target content?>" +
+      "<streams:stream" +
+      " xmlns:streams='streams-namespace'" +
+      " xmlns='jabber:client'" +
+      " to='im.&amp;localhost'" +
+      " streams:local-name='value&amp;'" +
+      " xml:lang='en'" +
+      ">" +
+      "<streams:features" +
+      "/>" +
+      "</streams:stream>"
+
 
   "XmlEventEncode" should "work" in
     withMaterializer { mat =>
@@ -105,6 +134,17 @@ final class XmlEventCodecTest extends TestBase {
             .via(XmlEventCodec.decode)
             .runFold(Queue.empty[HighLevelEvent])(_.enqueue(_))(mat)
         futureEvents.map(_.toList should be (parsed))(mat.executionContext)
+      }
+    }
+
+  it should "not fail upon coming accross xml:lang='en' attribute" in
+    withMaterializer { mat =>
+      futureOk {
+        val futureEvents =
+          Source(List(renderedWithXmlLangAttr))
+            .via(XmlEventCodec.decode)
+            .runFold(Queue.empty[HighLevelEvent])(_.enqueue(_))(mat)
+        futureEvents.map(_.toList should be (parsedWithXmlLangAttr))(mat.executionContext)
       }
     }
 
