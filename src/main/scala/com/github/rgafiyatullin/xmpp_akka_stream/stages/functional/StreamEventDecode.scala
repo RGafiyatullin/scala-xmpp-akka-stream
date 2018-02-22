@@ -87,12 +87,6 @@ object StreamEventDecode {
         case (None, isNext) =>
           ctx.pull(inlet).withState(withIS(isNext))
 
-        case (Some(seXSE: StreamEvent.StreamError), isNext) =>
-          ctx
-            .withState(withIS(isNext))
-            .push(outlet, seXSE)
-            .failStage(seXSE.xmppStreamError)
-
         case (Some(seSC: StreamEvent.StreamClose), isNext) =>
           ctx
             .withState(withIS(isNext))

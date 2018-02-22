@@ -83,9 +83,8 @@ final class StreamEventCodecTest extends TestBase {
           _ <- srcQ.offer(streamOpenEvent).map(_ should be(QueueOfferResult.Enqueued))
           _ <- snkQ.pull().map(_ should contain(StreamEvent.StreamOpen(Seq())))
           _ <- srcQ.offer(streamOpenEvent).map(_ should be(QueueOfferResult.Enqueued))
-          _ <- snkQ.pull().map(_ should matchPattern {
-            case Some(StreamEvent.StreamError(_: XmppStreamError.InvalidXml)) => })
-          _ <- snkQ.pull().failed.map(_ shouldBe an[XmppStreamError.InvalidXml])
+          _ <- snkQ.pull().failed.map(_ should matchPattern {
+            case _: XmppStreamError.InvalidXml => })
         }
           yield ()
       }

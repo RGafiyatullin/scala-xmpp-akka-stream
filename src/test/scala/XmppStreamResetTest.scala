@@ -84,8 +84,8 @@ final class XmppStreamResetTest extends TestBase {
             .offer(ByteString("<s:stream xmlns:s='http://etherx.jabber.org/streams'>"))
             .map(_ should be (QueueOfferResult.Enqueued))
           _ <- snkQ
-            .pull()
-            .map(_ should matchPattern { case Some(StreamEvent.StreamError(_: XmppStreamError.InvalidXml)) => })
+            .pull().failed
+            .map(_ should matchPattern { case _: XmppStreamError.InvalidXml => })
         }
           yield ()
       }
