@@ -10,11 +10,12 @@ object StreamEventCodec {
   type EncoderMat = StreamEventEncode.MaterializedValue
   type DecoderMat = StreamEventDecode.MaterializedValue
 
+  val encode: GraphStageWithMaterializedValue[EncoderShape, EncoderMat] = encode(dumpStreamErrorCause = false)
   /**
     * Shape: Flow[StreamEvent, HighLevelEvent]
     * Mat-Value: NotUsed
     */
-  val encode: GraphStageWithMaterializedValue[EncoderShape, EncoderMat] = StreamEventEncode().toGraph
+  def encode(dumpStreamErrorCause: Boolean): GraphStageWithMaterializedValue[EncoderShape, EncoderMat] = StreamEventEncode(dumpStreamErrorCause).toGraph
 
   /**
     * Shape: Flow[HighLevelEvent, StreamEvent]

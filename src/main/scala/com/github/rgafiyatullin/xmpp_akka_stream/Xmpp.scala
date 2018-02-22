@@ -23,9 +23,11 @@ object Xmpp {
         .via(StreamEventCodec.decode)
         .named("Xmpp.plaintextXml.upstream")
 
-    def downstream: DownstreamTransport[NotUsed] =
+    def downstream: DownstreamTransport[NotUsed] = downstream(dumpStreamErrorCause = false)
+
+    def downstream(dumpStreamErrorCause: Boolean): DownstreamTransport[NotUsed] =
       Flow[StreamEvent]
-        .via(StreamEventCodec.encode)
+        .via(StreamEventCodec.encode(dumpStreamErrorCause))
         .via(XmlEventCodec.encode)
         .via(Utf8Codec.encode)
         .named("Xmpp.plaintextXml.downstream")

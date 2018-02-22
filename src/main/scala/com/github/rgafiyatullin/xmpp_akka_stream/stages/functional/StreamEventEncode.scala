@@ -18,7 +18,8 @@ object StreamEventEncode {
   sealed trait State extends Stage.State[StreamEventEncode]
 
   object State extends Stage.State[StreamEventEncode] {
-    def empty: State = StateNormal()
+    def create(dumpStreamErrorCause: Boolean): State =
+      StateNormal(OutputStream.empty.copy(dumpStreamErrorCause = dumpStreamErrorCause))
   }
 
   final case class StateInletClosed(os: OutputStream, failureOption: Option[Throwable]) extends State {
@@ -38,7 +39,7 @@ object StreamEventEncode {
       }
   }
 
-  final case class StateNormal(os: OutputStream = OutputStream.empty) extends State {
+  final case class StateNormal(os: OutputStream) extends State {
     def withOS(osNext: OutputStream): StateNormal =
       copy(os = osNext)
 
@@ -74,7 +75,7 @@ object StreamEventEncode {
   }
 }
 
-final case class StreamEventEncode() extends Stage[StreamEventEncode] {
+final case class StreamEventEncode(dumpStreamErrorCause: Boolean = false) extends Stage[StreamEventEncode] {
   override type Shape = StreamEventEncode.Shape
   override type State = StreamEventEncode.State
   override type MatValue = StreamEventEncode.MaterializedValue
@@ -86,5 +87,5 @@ final case class StreamEventEncode() extends Stage[StreamEventEncode] {
     (logic: Stage.RunnerLogic,
      inheritedAttributes: Attributes)
   : (StreamEventEncode.State, MaterializedValue) =
-    (StreamEventEncode.State.empty, NotUsed)
+    (StreamEventEncode.State.create(dumpStreamErrorCause), NotUsed)
 }
