@@ -2,7 +2,7 @@ name := "xmpp-akka-stream"
 
 organization := "com.github.rgafiyatullin"
 
-version := "0.1.5.2"
+version := "0.2.0.0"
 
 scalaVersion := "2.12.4"
 

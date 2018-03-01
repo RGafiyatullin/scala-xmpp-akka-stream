@@ -12,7 +12,7 @@ object Xmpp {
   type UpstreamTransport[+MatValue] = Graph[UpstreamTransportShape, MatValue]
   type DownstreamTransportShape = FlowShape[StreamEvent, ByteString]
   type DownstreamTransport[+MatValue] = Graph[DownstreamTransportShape, MatValue]
-  type ProtocolShape = BidiShape[ByteString, StreamEvent, StreamEvent, ByteString]
+  type ProtocolShape = BidiShape[StreamEvent, ByteString, ByteString, StreamEvent]
   type Protocol[+MatValue] = Graph[ProtocolShape, MatValue]
 
   object plaintextXml {
@@ -33,7 +33,7 @@ object Xmpp {
         .named("Xmpp.plaintextXml.downstream")
 
     def protocol: Protocol[NotUsed] =
-      BidiFlow.fromFlows(upstream, downstream)
+      BidiFlow.fromFlows(downstream, upstream)
   }
 
 }
