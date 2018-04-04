@@ -10,6 +10,8 @@ import scala.annotation.tailrec
 import scala.concurrent.{Future, Promise}
 
 object Utf8Decode {
+  import com.github.rgafiyatullin.xmpp_akka_stream.EitherWithMap._
+
   type StageShape = FlowShape[ByteString, String]
 
   final class Api(actorRef: ActorRef)
@@ -41,7 +43,7 @@ object Utf8Decode {
     @tailrec
     private def feedDecoderLoop(bs: ByteString): Unit =
       bs.headOption.flatMap(
-        decoder.in(_).map(_.out) match {
+        decoder.in(_).doMap(_.out) match {
           case Left(utf8Error) =>
             fail(outlet, utf8Error)
 
@@ -63,6 +65,7 @@ object Utf8Decode {
     override def preStart(): Unit = {
       super.preStart()
       apiPromise.success(new Api(getStageActor((receive _).tupled).ref))
+      ()
     }
 
     setHandler(inlet, new InHandler {

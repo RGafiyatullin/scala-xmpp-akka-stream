@@ -63,6 +63,7 @@ object StreamEventDecode {
     override def preStart(): Unit = {
       super.preStart()
       apiPromise.success(new Api(getStageActor((receive _).tupled).ref))
+      ()
     }
 
     setHandler(inlet, new InHandler {

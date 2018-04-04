@@ -56,6 +56,7 @@ object Utf8Encode {
     override def preStart(): Unit = {
       super.preStart()
       apiPromise.success(new Api(getStageActor((receive _).tupled).ref))
+      ()
     }
   }
 }

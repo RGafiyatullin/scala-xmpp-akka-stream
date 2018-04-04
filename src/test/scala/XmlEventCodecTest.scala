@@ -66,15 +66,15 @@ final class XmlEventCodecTest extends TestBase {
 
 
   "XmlEventEncode" should "work" in
-    withMaterializer { mat =>
+    unit(withMaterializer { mat =>
       futureOk {
         Source(parsed)
           .via(XmlEventCodec.encode)
           .runReduce(_ ++ _)(mat)
-          .map(_ should be (rendered))(mat.executionContext) } }
+          .map(_ should be (rendered))(mat.executionContext) } })
 
   "XmlEventDecode" should "work #1" in
-    withMaterializer { mat =>
+    unit(withMaterializer { mat =>
       futureOk {
         val futureEvents =
           Source(List(rendered))
@@ -82,10 +82,10 @@ final class XmlEventCodecTest extends TestBase {
             .runFold(Queue.empty[HighLevelEvent])(_.enqueue(_))(mat)
         futureEvents.map(_.toList should be (parsed))(mat.executionContext)
       }
-    }
+    })
 
   it should "not fail on using previously imported prefix" in
-    withMaterializer { mat =>
+    unit(withMaterializer { mat =>
       futureOk {
         Source(List("<prefix:local-name xmlns:prefix='namespace'><prefix:local-name>"))
           .via(XmlEventCodec.decode)
@@ -95,10 +95,10 @@ final class XmlEventCodecTest extends TestBase {
             HighLevelEvent.ElementOpen(ep, "prefix", "local-name", "namespace", Seq.empty)
           )))(mat.executionContext)
       }
-    }
+    })
 
   it should "fail on using previously imported prefix when reset in between" in
-    withMaterializer { mat =>
+    unit(withMaterializer { mat =>
       implicit val ec: ExecutionContext = mat.executionContext
       futureOk {
         val ((srcQ, xedApiFut), snkQ) =
@@ -120,10 +120,10 @@ final class XmlEventCodecTest extends TestBase {
         }
           yield ()
       }
-    }
+    })
 
   it should "work #2" in
-    withMaterializer { mat =>
+    unit(withMaterializer { mat =>
       futureOk {
         val futureEvents =
           Source(
@@ -135,10 +135,10 @@ final class XmlEventCodecTest extends TestBase {
             .runFold(Queue.empty[HighLevelEvent])(_.enqueue(_))(mat)
         futureEvents.map(_.toList should be (parsed))(mat.executionContext)
       }
-    }
+    })
 
   it should "not fail upon coming accross xml:lang='en' attribute" in
-    withMaterializer { mat =>
+    unit(withMaterializer { mat =>
       futureOk {
         val futureEvents =
           Source(List(renderedWithXmlLangAttr))
@@ -146,6 +146,6 @@ final class XmlEventCodecTest extends TestBase {
             .runFold(Queue.empty[HighLevelEvent])(_.enqueue(_))(mat)
         futureEvents.map(_.toList should be (parsedWithXmlLangAttr))(mat.executionContext)
       }
-    }
+    })
 
 }

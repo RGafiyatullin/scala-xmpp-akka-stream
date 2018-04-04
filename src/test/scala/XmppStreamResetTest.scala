@@ -26,7 +26,7 @@ final class XmppStreamResetTest extends TestBase {
 
 
   "XMPP Output Stream" should "just reopen the stream upon double stream open" in
-    withMaterializer { mat =>
+    unit(withMaterializer { mat =>
       futureOk {
         implicit val ec: ExecutionContext = mat.executionContext
 
@@ -56,10 +56,10 @@ final class XmppStreamResetTest extends TestBase {
         }
           yield ()
       }
-    }
+    })
 
   "XMPP Input Stream" should "fail on doulbe stream open with no reset" in
-    withMaterializer { mat =>
+    unit(withMaterializer { mat =>
       futureOk {
         implicit val ec: ExecutionContext = mat.executionContext
 
@@ -89,10 +89,10 @@ final class XmppStreamResetTest extends TestBase {
         }
           yield ()
       }
-    }
+    })
 
   it should "not fail on doulbe stream open with reset" in
-    withMaterializer { mat =>
+    unit(withMaterializer { mat =>
       futureOk {
         implicit val ec: ExecutionContext = mat.executionContext
 
@@ -123,5 +123,5 @@ final class XmppStreamResetTest extends TestBase {
         }
           yield ()
       }
-    }
+    })
 }

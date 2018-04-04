@@ -2,13 +2,14 @@ package com.github.rgafiyatullin.xmpp_akka_stream.stages.functional
 
 import akka.NotUsed
 import akka.stream.{Attributes, FlowShape, Inlet, Outlet}
-import akka.stream.stage.GraphStageLogic
+
 import akka.util.ByteString
 import com.github.rgafiyatullin.akka_stream_util.custom_stream_stage.Stage
 import com.github.rgafiyatullin.akka_stream_util.custom_stream_stage.contexts.{InletPushedContext, OutletPulledContext}
 import com.github.rgafiyatullin.xml.utf8.{Utf8Error, Utf8InputStream}
 
 import scala.collection.immutable.Queue
+import scala.util.{Either, Right}
 
 object Utf8Decode {
   type Shape = FlowShape[ByteString, String]
@@ -33,17 +34,18 @@ object Utf8Decode {
     }
 
     override def inletOnPush(ctx: InletPushedContext[Utf8Decode]): InletPushedContext[Utf8Decode] = {
+      import com.github.rgafiyatullin.xmpp_akka_stream.EitherWithMap._
       assert(ctx.inlet == inlet)
 
       ctx.peek(inlet)
         .foldLeft[Either[Utf8Error, (Queue[Char], Utf8InputStream)]](Right(Queue.empty, decoder)) {
           case (acc, byte) => // fold through each byte
-            acc.flatMap {
+            acc.doFlatMap {
               case (q, dIn) => // if Right
                 dIn
                   .in(byte) // feed another byte
-                  .map(_.out) // if Right: fetching another char (if available)
-                  .map { // if there was a char to fetch — append it into the queue
+                  .doMap(_.out) // if Right: fetching another char (if available)
+                  .doMap { // if there was a char to fetch — append it into the queue
                     case (charOption, dOut) =>
                       (q ++ charOption, dOut)
                   }

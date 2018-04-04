@@ -42,7 +42,7 @@ final class StreamEventCodecTest extends TestBase {
     HighLevelEvent.ElementClose(ep, "", qnIQ.localName, qnIQ.ns))
 
   "StreamEventEncode" should "work #1" in
-    withMaterializer{ mat =>
+    unit(withMaterializer{ mat =>
       futureOk {
         val futureXmlEvents =
           Source(streamEvents)
@@ -51,10 +51,10 @@ final class StreamEventCodecTest extends TestBase {
 
         futureXmlEvents.map(_.toList should be (xmlEvents))(mat.executionContext)
       }
-    }
+    })
 
   "StreamEventDecode" should "work" in
-    withMaterializer { mat =>
+    unit(withMaterializer { mat =>
       futureOk {
         val futureStreamEvents =
           Source(xmlEvents)
@@ -63,10 +63,10 @@ final class StreamEventCodecTest extends TestBase {
 
         futureStreamEvents.map(_.toList should be (streamEventsNoImports))(mat.executionContext)
       }
-    }
+    })
 
   it should "fail on stream re-open when hasn't been reset" in
-    withMaterializer { implicit mat =>
+    unit(withMaterializer { implicit mat =>
       futureOk {
         implicit val ec: ExecutionContext = mat.executionContext
 
@@ -88,10 +88,10 @@ final class StreamEventCodecTest extends TestBase {
         }
           yield ()
       }
-    }
+    })
 
   it should "not fail on stream re-open when has been reset" in
-    withMaterializer { implicit mat =>
+    unit(withMaterializer { implicit mat =>
       futureOk {
         implicit val ec: ExecutionContext = mat.executionContext
 
@@ -115,11 +115,11 @@ final class StreamEventCodecTest extends TestBase {
         }
           yield ()
       }
-    }
+    })
 
 
   it should "complete on stream-close event" in
-    withMaterializer { implicit mat =>
+    unit(withMaterializer { implicit mat =>
       futureOk {
         implicit val ec: ExecutionContext = mat.executionContext
 
@@ -142,5 +142,5 @@ final class StreamEventCodecTest extends TestBase {
         }
           yield ()
       }
-    }
+    })
 }

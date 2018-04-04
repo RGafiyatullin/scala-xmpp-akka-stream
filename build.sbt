@@ -1,26 +1,30 @@
-name := "xmpp-akka-stream"
 
-organization := "com.github.rgafiyatullin"
+lazy val root = (project in file("."))
+  .settings(
+    name := "xmpp-akka-stream",
+    organization := "com.github.rgafiyatullin",
+    version := BuildEnv.version,
 
-version := "0.2.0.1"
+    scalacOptions ++= Seq("-unchecked", "-deprecation", "-feature"),
+    scalacOptions ++= Seq("-language:implicitConversions"),
+    scalacOptions ++= Seq("-Ywarn-value-discard", "-Xfatal-warnings"),
 
-scalaVersion := "2.12.4"
+    scalaVersion := BuildEnv.scalaVersion,
 
-scalacOptions ++= Seq("-unchecked", "-deprecation", "-feature")
-scalacOptions ++= Seq("-language:implicitConversions")
-scalacOptions ++= Seq("-Ywarn-value-discard", "-Xfatal-warnings")
+    libraryDependencies ++= Seq(
+      "org.scalatest" %% "scalatest" % {
+        scalaVersion.value match {
+          case v2_12 if v2_12.startsWith("2.12.") => "3.0.4"
+          case v2_11 if v2_11.startsWith("2.11.") => "2.2.6"
+        }
+      },
+      "com.github.rgafiyatullin"      %% "xml"              % "0.2.0.3",
+      "com.github.rgafiyatullin"      %% "xmpp-protocol"    % "0.5.3.5",
+      "com.github.rgafiyatullin"      %% "akka-stream-util" % "0.2.2.2",
+      "com.typesafe.akka"             %% "akka-stream"      % "2.5.7"
+    ),
 
-publishTo := {
-  Some("releases"  at "https://artifactory.wgdp.io:443/xmppcs-maven-releases/")
-}
-credentials += Credentials(Path.userHome / ".ivy2" / ".credentials.wg-domain")
+    publishTo := BuildEnv.publishTo,
+    credentials ++= BuildEnv.credentials.toSeq
+  )
 
-
-
-libraryDependencies ++= Seq(
-  "org.scalatest"                 %% "scalatest"        % "3.0.4",
-  "com.github.rgafiyatullin"      %% "xml"              % "0.2.0.3",
-  "com.github.rgafiyatullin"      %% "xmpp-protocol"    % "0.5.2.1",
-  "com.github.rgafiyatullin"      %% "akka-stream-util" % "0.2.2.0",
-  "com.typesafe.akka"             %% "akka-stream"      % "2.5.7"
-)
