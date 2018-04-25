@@ -2,7 +2,7 @@ package com.github.rgafiyatullin.xmpp_akka_stream.util
 
 import scala.concurrent.ExecutionContext
 
-object SameThreadExecutionContext extends ExecutionContext {
+private[xmpp_akka_stream] object SameThreadExecutionContext extends ExecutionContext {
   override def execute(runnable: Runnable): Unit =
     runnable.run()
 
