@@ -58,7 +58,7 @@ final class XmppStreamResetTest extends TestBase {
       }
     })
 
-  "XMPP Input Stream" should "fail on doulbe stream open with no reset" in
+  "XMPP Input Stream" should "fail on double stream open with no reset" in
     unit(withMaterializer { mat =>
       futureOk {
         implicit val ec: ExecutionContext = mat.executionContext
@@ -91,7 +91,7 @@ final class XmppStreamResetTest extends TestBase {
       }
     })
 
-  it should "not fail on doulbe stream open with reset" in
+  it should "not fail on double stream open with reset" in
     unit(withMaterializer { mat =>
       futureOk {
         implicit val ec: ExecutionContext = mat.executionContext
