@@ -1,17 +1,20 @@
-import akka.stream.{FlowShape, Graph, OverflowStrategy}
-import akka.stream.scaladsl.{Flow, Keep, RunnableGraph, Sink, Source}
+import akka.stream.{FlowShape, Graph}
+import akka.stream.scaladsl.{Keep, RunnableGraph, Sink, Source}
 import akka.util.ByteString
 import com.github.rgafiyatullin.xml.common.{HighLevelEvent, QName}
 import com.github.rgafiyatullin.xml.dom.Node
 import com.github.rgafiyatullin.xmpp_akka_stream.Xmpp
 import com.github.rgafiyatullin.xmpp_akka_stream.codecs.{StreamEventCodec, Utf8Codec, XmlEventCodec}
+import com.github.rgafiyatullin.xmpp_akka_stream.stages.aaltoxml.AaltoXmlEventDecode
 import com.github.rgafiyatullin.xmpp_protocol.streams.StreamEvent
-import org.scalatest.time.{Millis, Seconds, Span}
 
 import scala.concurrent.duration._
 import scala.concurrent.{Await, ExecutionContext, Future}
 
 final class ThroughputTest extends TestBase {
+  private val aaltoInputFactory  = AaltoXmlEventDecode.asyncXmlInputFactory
+  println("Eagerly initialize aaltoInputFactory: ", aaltoInputFactory)
+
   override def futureAwaitDuration: FiniteDuration = 20.seconds
 
   implicit class FutureWithTimeIt[T](f: Future[T]) {
@@ -100,6 +103,14 @@ final class ThroughputTest extends TestBase {
         .toMat(Sink.ignore)(Keep.right)
     }
 
+  it should "measure Aalto.XED.decode" in
+    runTimed("D:AaltoXED.decode") {
+      Source(data.byteStrings.toList)
+        .via(AaltoXmlEventDecode().toGraph)
+        .toMat(Sink.ignore)(Keep.right)
+
+    }
+
   it should "measure Utf8Codec.decode (coalesced)" in
     runTimed("D:Utf8Codec.decode") {
       Source(List(data.byteStrings.reduce(_ ++ _)))
@@ -128,10 +139,17 @@ final class ThroughputTest extends TestBase {
         .toMat(Sink.ignore)(Keep.right)
     }
 
-  it should "measure upstream" in
-    runTimed("Upstream") {
+  it should "measure upstream (aalto)" in
+    runTimed("Upstream-Aalto") {
       Source(data.byteStrings.toList)
-        .via(Xmpp.plaintextXml.upstream).log("upstream")
+        .via(Xmpp.plaintextXml.upstreamAalto).log("upstream")
+        .toMat(Sink.ignore)(Keep.right)
+    }
+
+  it should "measure upstream (handmade)" in
+    runTimed("Upstream-Handmade") {
+      Source(data.byteStrings.toList)
+        .via(Xmpp.plaintextXml.upstreamHandmade).log("upstream")
         .toMat(Sink.ignore)(Keep.right)
     }
 }
