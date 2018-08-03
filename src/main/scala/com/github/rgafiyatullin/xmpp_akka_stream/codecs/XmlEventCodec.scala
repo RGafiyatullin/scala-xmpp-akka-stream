@@ -1,7 +1,6 @@
 package com.github.rgafiyatullin.xmpp_akka_stream.codecs
 
 import akka.stream.Graph
-import akka.stream.stage.GraphStageWithMaterializedValue
 import com.github.rgafiyatullin.xml.common.HighLevelEvent
 import com.github.rgafiyatullin.xmpp_akka_stream.stages.functional.{XmlEventDecode, XmlEventEncode}
 

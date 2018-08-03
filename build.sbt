@@ -21,7 +21,8 @@ lazy val root = (project in file("."))
       "com.github.rgafiyatullin"      %% "xml"              % "0.2.0.3",
       "com.github.rgafiyatullin"      %% "xmpp-protocol"    % "0.5.5.0",
       "com.github.rgafiyatullin"      %% "akka-stream-util" % "0.2.2.2",
-      "com.typesafe.akka"             %% "akka-stream"      % "2.5.7"
+      "com.typesafe.akka"             %% "akka-stream"      % "2.5.7",
+      "com.fasterxml"                 %  "aalto-xml"        % "1.1.0"
     ),
 
     publishTo := BuildEnv.publishTo,

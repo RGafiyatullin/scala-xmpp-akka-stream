@@ -1,26 +1,31 @@
 import akka.stream.{OverflowStrategy, QueueOfferResult}
 import akka.stream.scaladsl.{Keep, Sink, Source}
+import akka.util.ByteString
+import com.fasterxml.aalto.WFCException
 import com.github.rgafiyatullin.xml.common.{Attribute, HighLevelEvent, Position}
 import com.github.rgafiyatullin.xml.stream_parser.high_level_parser.HighLevelParserError
-import com.github.rgafiyatullin.xmpp_akka_stream.codecs.XmlEventCodec
+import com.github.rgafiyatullin.xmpp_akka_stream.stages.aaltoxml.XmlEventDecode
 
 import scala.collection.immutable.Queue
 import scala.concurrent.ExecutionContext
 import scala.concurrent.duration._
 
-final class XmlEventCodecTest extends TestBase {
+final class AaltoDecoderTest extends TestBase {
   val ep: Position = Position.withoutPosition
   val parsed: List[HighLevelEvent] =
     List(
       HighLevelEvent.Comment(ep, "text"),
       HighLevelEvent.ProcessingInstrutcion(ep, "target", "content"),
       HighLevelEvent.ElementOpen(ep, "streams", "stream", "streams-namespace", Seq(
-        Attribute.NsImport("streams", "streams-namespace"),
-        Attribute.NsImport("", "jabber:client"),
+//        Attribute.NsImport("streams", "streams-namespace"),
+//        Attribute.NsImport("", "jabber:client"),
         Attribute.Unprefixed("to", "im.&localhost"),
         Attribute.Prefixed("streams", "local-name", "value&")
       )),
-      HighLevelEvent.ElementSelfClosing(ep, "streams", "features", "streams-namespace", Seq()),
+
+      HighLevelEvent.ElementOpen(ep, "streams", "features", "streams-namespace", Seq()),
+      HighLevelEvent.ElementClose(ep, "streams", "features", "streams-namespace"),
+
       HighLevelEvent.ElementClose(ep, "streams", "stream", "streams-namespace"))
 
   val parsedWithXmlLangAttr: List[HighLevelEvent] =
@@ -28,27 +33,30 @@ final class XmlEventCodecTest extends TestBase {
       HighLevelEvent.Comment(ep, "text"),
       HighLevelEvent.ProcessingInstrutcion(ep, "target", "content"),
       HighLevelEvent.ElementOpen(ep, "streams", "stream", "streams-namespace", Seq(
-        Attribute.NsImport("streams", "streams-namespace"),
-        Attribute.NsImport("", "jabber:client"),
+//        Attribute.NsImport("streams", "streams-namespace"),
+//        Attribute.NsImport("", "jabber:client"),
         Attribute.Unprefixed("to", "im.&localhost"),
         Attribute.Prefixed("streams", "local-name", "value&"),
         Attribute.Prefixed("xml", "lang", "en")
       )),
-      HighLevelEvent.ElementSelfClosing(ep, "streams", "features", "streams-namespace", Seq()),
+
+      HighLevelEvent.ElementOpen(ep, "streams", "features", "streams-namespace", Seq()),
+      HighLevelEvent.ElementClose(ep, "streams", "features", "streams-namespace"),
+
       HighLevelEvent.ElementClose(ep, "streams", "stream", "streams-namespace"))
 
   val rendered: String =
     "<!--text-->" +
-    "<?target content?>" +
-    "<streams:stream" +
-    " xmlns:streams='streams-namespace'" +
-    " xmlns='jabber:client'" +
-    " to='im.&amp;localhost'" +
-    " streams:local-name='value&amp;'" +
-    ">" +
-    "<streams:features" +
-    "/>" +
-    "</streams:stream>"
+      "<?target content?>" +
+      "<streams:stream" +
+      " xmlns:streams='streams-namespace'" +
+      " xmlns='jabber:client'" +
+      " to='im.&amp;localhost'" +
+      " streams:local-name='value&amp;'" +
+      ">" +
+      "<streams:features" +
+      "/>" +
+      "</streams:stream>"
 
   val renderedWithXmlLangAttr: String =
     "<!--text-->" +
@@ -65,22 +73,31 @@ final class XmlEventCodecTest extends TestBase {
       "</streams:stream>"
 
 
-  "XmlEventEncode" should "work" in
-    unit(withMaterializer { mat =>
+  "aalto-decoder" should "work #1" in
+    unit(withMaterializer { implicit mat =>
+      implicit val ec: ExecutionContext = mat.executionContext
       futureOk {
-        Source(parsed)
-          .via(XmlEventCodec.encode)
-          .runReduce(_ ++ _)(mat)
-          .map(_ should be (rendered))(mat.executionContext) } })
 
-  "XmlEventDecode" should "work #1" in
+        val futureEvents =
+          Source(List(rendered))
+            .map(_.getBytes)
+            .map(ByteString(_))
+            .via(XmlEventDecode().toGraph)
+            .runFold(Queue.empty[HighLevelEvent])(_.enqueue(_))(mat)
+        futureEvents.map(_.toList should be (parsed))(mat.executionContext)
+      }
+    })
+
+  it should "not fail upon coming across xml:lang='en' attribute" in
     unit(withMaterializer { mat =>
       futureOk {
         val futureEvents =
-          Source(List(rendered))
-            .via(XmlEventCodec.decode)
+          Source(List(renderedWithXmlLangAttr))
+            .map(_.getBytes)
+            .map(ByteString(_))
+            .via(XmlEventDecode().toGraph)
             .runFold(Queue.empty[HighLevelEvent])(_.enqueue(_))(mat)
-        futureEvents.map(_.toList should be (parsed))(mat.executionContext)
+        futureEvents.map(_.toList should be (parsedWithXmlLangAttr))(mat.executionContext)
       }
     })
 
@@ -88,14 +105,17 @@ final class XmlEventCodecTest extends TestBase {
     unit(withMaterializer { mat =>
       futureOk {
         Source(List("<prefix:local-name xmlns:prefix='namespace'><prefix:local-name>"))
-          .via(XmlEventCodec.decode)
+          .map(_.getBytes)
+          .map(ByteString(_))
+          .via(XmlEventDecode().toGraph)
           .runFold(Queue.empty[HighLevelEvent])(_.enqueue(_))(mat)
           .map(_ should be (Seq(
-            HighLevelEvent.ElementOpen(ep, "prefix", "local-name", "namespace", Seq(Attribute.NsImport("prefix", "namespace"))),
+            HighLevelEvent.ElementOpen(ep, "prefix", "local-name", "namespace", Seq.empty),
             HighLevelEvent.ElementOpen(ep, "prefix", "local-name", "namespace", Seq.empty)
           )))(mat.executionContext)
       }
     })
+
 
   it should "fail on using previously imported prefix when reset in between" in
     unit(withMaterializer { mat =>
@@ -103,7 +123,9 @@ final class XmlEventCodecTest extends TestBase {
       futureOk {
         val ((srcQ, xedApiFut), snkQ) =
           Source.queue[String](1, OverflowStrategy.fail)
-            .viaMat(XmlEventCodec.decode)(Keep.both)
+            .map(_.getBytes)
+            .map(ByteString(_))
+            .viaMat(XmlEventDecode().toGraph)(Keep.both)
             .toMat(Sink.queue[HighLevelEvent]())(Keep.both)
             .run()(mat)
 
@@ -113,10 +135,10 @@ final class XmlEventCodecTest extends TestBase {
           _ <- snkQ.pull()
             .map(_ should contain ( HighLevelEvent.ElementOpen(
               ep, "prefix", "local-name", "namespace",
-              Seq(Attribute.NsImport("prefix", "namespace"))) ))
+              Seq.empty) ))
           _ <- xedApi.reset()(100.millis)
           _ <- srcQ.offer("<prefix:local-name>")
-          _ <- snkQ.pull().failed.map(_ shouldBe an[HighLevelParserError])
+          _ <- snkQ.pull().failed.map { _ shouldBe a[WFCException] }
         }
           yield ()
       }
@@ -131,20 +153,11 @@ final class XmlEventCodecTest extends TestBase {
               .toCharArray
               .map { ch => new String(Array(ch)) }
               .toList)
-            .via(XmlEventCodec.decode)
+            .map(_.getBytes)
+            .map(ByteString(_))
+            .via(XmlEventDecode().toGraph)
             .runFold(Queue.empty[HighLevelEvent])(_.enqueue(_))(mat)
         futureEvents.map(_.toList should be (parsed))(mat.executionContext)
-      }
-    })
-
-  it should "not fail upon coming across xml:lang='en' attribute" in
-    unit(withMaterializer { mat =>
-      futureOk {
-        val futureEvents =
-          Source(List(renderedWithXmlLangAttr))
-            .via(XmlEventCodec.decode)
-            .runFold(Queue.empty[HighLevelEvent])(_.enqueue(_))(mat)
-        futureEvents.map(_.toList should be (parsedWithXmlLangAttr))(mat.executionContext)
       }
     })
 
