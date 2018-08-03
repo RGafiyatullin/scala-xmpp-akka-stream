@@ -16,7 +16,7 @@ object StreamEventCodec {
     * Shape: Flow[StreamEvent, HighLevelEvent]
     * Mat-Value: NotUsed
     */
-  def encode(dumpStreamErrorCause: Boolean): GraphStageWithMaterializedValue[EncoderShape, EncoderMat] = StreamEventEncode(dumpStreamErrorCause).toGraph
+  def encode(dumpStreamErrorCause: Boolean): Graph[EncoderShape, EncoderMat] = StreamEventEncode(dumpStreamErrorCause).toGraph
 
   /**
     * Shape: Flow[HighLevelEvent, StreamEvent]
