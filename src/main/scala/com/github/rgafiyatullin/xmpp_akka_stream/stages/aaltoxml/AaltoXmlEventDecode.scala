@@ -9,7 +9,6 @@ import com.fasterxml.aalto.stax.InputFactoryImpl
 import com.github.rgafiyatullin.akka_stream_util.custom_stream_stage.Stage
 import com.github.rgafiyatullin.akka_stream_util.custom_stream_stage.contexts._
 import com.github.rgafiyatullin.xml.common.{Attribute, HighLevelEvent, Position}
-import com.github.rgafiyatullin.xml.stream_parser.high_level_parser.HighLevelParserError
 import com.github.rgafiyatullin.xmpp_akka_stream.codecs.XmlEventCodec
 import javax.xml.stream.XMLStreamConstants
 
@@ -17,7 +16,7 @@ import scala.annotation.tailrec
 import scala.concurrent.{ExecutionContext, Future, Promise}
 import scala.util.{Failure, Success, Try}
 
-object XmlEventDecode {
+object AaltoXmlEventDecode {
   type XmlEvent = XmlEventCodec.XmlEvent
   val inlet: Inlet[ByteString] = Inlet("XmlEventDecode.In")
   val outlet: Outlet[XmlEvent] = Outlet("XmlEventDecode.Out")
@@ -26,6 +25,7 @@ object XmlEventDecode {
   type MaterializedValue = Future[Api]
 
   private val emptyPosition: Position = Position.withoutPosition
+  val asyncXmlInputFactory: AsyncXMLInputFactory = new InputFactoryImpl()
 
   private object messages {
     case object Reset
@@ -42,21 +42,20 @@ object XmlEventDecode {
       StateInitial(apiPromise)
   }
 
-  sealed trait State extends Stage.State[XmlEventDecode] {
+  sealed trait State extends Stage.State[AaltoXmlEventDecode] {
 
   }
 
   final case class StateInitial(apiPromise: Promise[Api]) extends State {
     override def receiveEnabled: Boolean = true
 
-    override def preStart(ctx: PreStartContext[XmlEventDecode]): PreStartContext[XmlEventDecode] = {
+    override def preStart(ctx: PreStartContext[AaltoXmlEventDecode]): PreStartContext[AaltoXmlEventDecode] = {
       apiPromise.success(new Api(ctx.stageActorRef, ctx.executionContext))
-      val inputFactory = new InputFactoryImpl()
-      val parser = inputFactory.createAsyncForByteArray()
-      ctx.withState(StateNormal(inputFactory, parser))
+      val parser = asyncXmlInputFactory.createAsyncForByteArray()
+      ctx.withState(StateNormal(asyncXmlInputFactory, parser))
     }
 
-    override def postStop(ctx: PostStopContext[XmlEventDecode]): PostStopContext[XmlEventDecode] = {
+    override def postStop(ctx: PostStopContext[AaltoXmlEventDecode]): PostStopContext[AaltoXmlEventDecode] = {
       apiPromise.tryFailure(new UninitializedError())
       ctx
     }
@@ -64,7 +63,7 @@ object XmlEventDecode {
 
   final case class StateNormal(inputFactory: AsyncXMLInputFactory, parser: AsyncXMLStreamReader[AsyncByteArrayFeeder]) extends State {
 
-    override def receive(ctx: ReceiveContext.NotReplied[XmlEventDecode]): ReceiveContext[XmlEventDecode] =
+    override def receive(ctx: ReceiveContext.NotReplied[AaltoXmlEventDecode]): ReceiveContext[AaltoXmlEventDecode] =
       ctx.handleWith {
         case messages.Reset =>
           parser.closeCompletely()
@@ -75,19 +74,19 @@ object XmlEventDecode {
       }
 
 
-    override def inletOnPush(ctx: InletPushedContext[XmlEventDecode]): InletPushedContext[XmlEventDecode] = {
+    override def inletOnPush(ctx: InletPushedContext[AaltoXmlEventDecode]): InletPushedContext[AaltoXmlEventDecode] = {
       val inputByteArray = ctx.peek(inlet).toArray
       parser.getInputFeeder.feedInput(inputByteArray, 0, inputByteArray.length)
 
       fetchLoop(ctx.drop(inlet))
     }
 
-    override def outletOnPull(ctx: OutletPulledContext[XmlEventDecode]): OutletPulledContext[XmlEventDecode] =
+    override def outletOnPull(ctx: OutletPulledContext[AaltoXmlEventDecode]): OutletPulledContext[AaltoXmlEventDecode] =
       fetchLoop(ctx)
 
 
     @tailrec
-    private def fetchLoop[Ctx <: Context[Ctx, XmlEventDecode]](ctx: Ctx): Ctx =
+    private def fetchLoop[Ctx <: Context[Ctx, AaltoXmlEventDecode]](ctx: Ctx): Ctx =
       if (!parser.hasNext)
         ctx.completeStage()
       else
@@ -165,7 +164,7 @@ object XmlEventDecode {
             ctx.failStage(reason)
         }
 
-    override def inletOnUpstreamFinish(ctx: InletFinishedContext[XmlEventDecode]): InletFinishedContext[XmlEventDecode] = {
+    override def inletOnUpstreamFinish(ctx: InletFinishedContext[AaltoXmlEventDecode]): InletFinishedContext[AaltoXmlEventDecode] = {
       parser.getInputFeeder.endOfInput()
       if (ctx.isAvailable(outlet))
         fetchLoop(ctx)
@@ -174,22 +173,22 @@ object XmlEventDecode {
     }
   }
 
-  def apply(): XmlEventDecode =
-    new XmlEventDecode()
+  def apply(): AaltoXmlEventDecode =
+    new AaltoXmlEventDecode()
 }
 
-final class XmlEventDecode private () extends Stage[XmlEventDecode] {
-  override type Shape = XmlEventDecode.Shape
-  override type State = XmlEventDecode.State
-  override type MatValue = XmlEventDecode.MaterializedValue
+final class AaltoXmlEventDecode private() extends Stage[AaltoXmlEventDecode] {
+  override type Shape = AaltoXmlEventDecode.Shape
+  override type State = AaltoXmlEventDecode.State
+  override type MatValue = AaltoXmlEventDecode.MaterializedValue
 
-  override def shape: Shape = FlowShape.of(XmlEventDecode.inlet, XmlEventDecode.outlet)
+  override def shape: Shape = FlowShape.of(AaltoXmlEventDecode.inlet, AaltoXmlEventDecode.outlet)
 
   override def initialStateAndMatValue
     (logic: Stage.RunnerLogic,
      inheritedAttributes: Attributes): (State, MatValue) = {
-    val apiPromise = Promise[XmlEventDecode.Api]()
-    val state = XmlEventDecode.State.create(apiPromise)
+    val apiPromise = Promise[AaltoXmlEventDecode.Api]()
+    val state = AaltoXmlEventDecode.State.create(apiPromise)
     (state, apiPromise.future)
   }
 }

@@ -4,7 +4,7 @@ import akka.util.ByteString
 import com.fasterxml.aalto.WFCException
 import com.github.rgafiyatullin.xml.common.{Attribute, HighLevelEvent, Position}
 import com.github.rgafiyatullin.xml.stream_parser.high_level_parser.HighLevelParserError
-import com.github.rgafiyatullin.xmpp_akka_stream.stages.aaltoxml.XmlEventDecode
+import com.github.rgafiyatullin.xmpp_akka_stream.stages.aaltoxml.AaltoXmlEventDecode
 
 import scala.collection.immutable.Queue
 import scala.concurrent.ExecutionContext
@@ -82,7 +82,7 @@ final class AaltoDecoderTest extends TestBase {
           Source(List(rendered))
             .map(_.getBytes)
             .map(ByteString(_))
-            .via(XmlEventDecode().toGraph)
+            .via(AaltoXmlEventDecode().toGraph)
             .runFold(Queue.empty[HighLevelEvent])(_.enqueue(_))(mat)
         futureEvents.map(_.toList should be (parsed))(mat.executionContext)
       }
@@ -95,7 +95,7 @@ final class AaltoDecoderTest extends TestBase {
           Source(List(renderedWithXmlLangAttr))
             .map(_.getBytes)
             .map(ByteString(_))
-            .via(XmlEventDecode().toGraph)
+            .via(AaltoXmlEventDecode().toGraph)
             .runFold(Queue.empty[HighLevelEvent])(_.enqueue(_))(mat)
         futureEvents.map(_.toList should be (parsedWithXmlLangAttr))(mat.executionContext)
       }
@@ -107,7 +107,7 @@ final class AaltoDecoderTest extends TestBase {
         Source(List("<prefix:local-name xmlns:prefix='namespace'><prefix:local-name>"))
           .map(_.getBytes)
           .map(ByteString(_))
-          .via(XmlEventDecode().toGraph)
+          .via(AaltoXmlEventDecode().toGraph)
           .runFold(Queue.empty[HighLevelEvent])(_.enqueue(_))(mat)
           .map(_ should be (Seq(
             HighLevelEvent.ElementOpen(ep, "prefix", "local-name", "namespace", Seq.empty),
@@ -125,7 +125,7 @@ final class AaltoDecoderTest extends TestBase {
           Source.queue[String](1, OverflowStrategy.fail)
             .map(_.getBytes)
             .map(ByteString(_))
-            .viaMat(XmlEventDecode().toGraph)(Keep.both)
+            .viaMat(AaltoXmlEventDecode().toGraph)(Keep.both)
             .toMat(Sink.queue[HighLevelEvent]())(Keep.both)
             .run()(mat)
 
@@ -155,7 +155,7 @@ final class AaltoDecoderTest extends TestBase {
               .toList)
             .map(_.getBytes)
             .map(ByteString(_))
-            .via(XmlEventDecode().toGraph)
+            .via(AaltoXmlEventDecode().toGraph)
             .runFold(Queue.empty[HighLevelEvent])(_.enqueue(_))(mat)
         futureEvents.map(_.toList should be (parsed))(mat.executionContext)
       }
