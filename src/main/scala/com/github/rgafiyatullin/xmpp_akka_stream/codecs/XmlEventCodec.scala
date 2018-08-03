@@ -1,5 +1,6 @@
 package com.github.rgafiyatullin.xmpp_akka_stream.codecs
 
+import akka.stream.Graph
 import akka.stream.stage.GraphStageWithMaterializedValue
 import com.github.rgafiyatullin.xml.common.HighLevelEvent
 import com.github.rgafiyatullin.xmpp_akka_stream.stages.functional.{XmlEventDecode, XmlEventEncode}
@@ -27,7 +28,7 @@ object XmlEventCodec {
     *
     * The stage is failed when upstream has failed.
     */
-  val encode: GraphStageWithMaterializedValue[EncoderShape, EncoderMat] = XmlEventEncode().toGraph
+  val encode: Graph[EncoderShape, EncoderMat] = XmlEventEncode().toGraph
 
   /**
     * Shape: `FlowShape[String, HighLevelEvent]`
@@ -45,5 +46,5 @@ object XmlEventCodec {
     * a) upstream has failed;
     * b) input cannot be parsed as XML.
     */
-  val decode: GraphStageWithMaterializedValue[DecoderShape, DecoderMat] = XmlEventDecode().toGraph
+  val decode: Graph[DecoderShape, DecoderMat] = XmlEventDecode().toGraph
 }

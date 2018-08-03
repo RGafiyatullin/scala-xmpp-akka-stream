@@ -1,7 +1,8 @@
 package com.github.rgafiyatullin.xmpp_akka_stream.codecs
 
+import akka.stream.Graph
 import akka.stream.stage.GraphStageWithMaterializedValue
-import com.github.rgafiyatullin.xmpp_akka_stream.stages.functional.{StreamEventEncode, StreamEventDecode}
+import com.github.rgafiyatullin.xmpp_akka_stream.stages.functional.{StreamEventDecode, StreamEventEncode}
 
 object StreamEventCodec {
   type EncoderShape = StreamEventEncode.Shape
@@ -10,7 +11,7 @@ object StreamEventCodec {
   type EncoderMat = StreamEventEncode.MaterializedValue
   type DecoderMat = StreamEventDecode.MaterializedValue
 
-  val encode: GraphStageWithMaterializedValue[EncoderShape, EncoderMat] = encode(dumpStreamErrorCause = false)
+  val encode: Graph[EncoderShape, EncoderMat] = encode(dumpStreamErrorCause = false)
   /**
     * Shape: Flow[StreamEvent, HighLevelEvent]
     * Mat-Value: NotUsed
@@ -21,5 +22,5 @@ object StreamEventCodec {
     * Shape: Flow[HighLevelEvent, StreamEvent]
     * Mat-Value: Future[StreamEventDecode.Api]
     */
-  val decode: GraphStageWithMaterializedValue[DecoderShape, DecoderMat] = StreamEventDecode().toGraph
+  val decode: Graph[DecoderShape, DecoderMat] = StreamEventDecode().toGraph
 }

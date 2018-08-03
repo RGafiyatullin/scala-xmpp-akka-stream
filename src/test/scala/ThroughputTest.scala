@@ -100,6 +100,13 @@ final class ThroughputTest extends TestBase {
         .toMat(Sink.ignore)(Keep.right)
     }
 
+  it should "measure Utf8Codec.decode (coasesced)" in
+    runTimed("D:Utf8Codec.decode") {
+      Source(List(data.byteStrings.reduce(_ ++ _)))
+        .via(Utf8Codec.decode)
+        .toMat(Sink.ignore)(Keep.right)
+    }
+
   it should "measure XmlEventCodec.decode" in
     runTimed("D:XmlEventCodec.decode") {
       Source(data.strings.toList)

@@ -1,6 +1,9 @@
 package com.github.rgafiyatullin.xmpp_akka_stream.codecs
 
+import akka.stream.Graph
+import akka.stream.scaladsl.{Flow, Keep}
 import akka.stream.stage.GraphStageWithMaterializedValue
+import akka.util.ByteString
 import com.github.rgafiyatullin.xmpp_akka_stream.stages.functional.Utf8Decode
 import com.github.rgafiyatullin.xmpp_akka_stream.stages.functional.Utf8Encode
 
@@ -10,6 +13,8 @@ object Utf8Codec {
 
   type EncoderShape = Utf8Encode.Shape
   type DecoderShape = Utf8Decode.Shape
+
+  private val bytesPerChunk: Int = 256
 
   /**
     * Shape: `FlowShape[String, ByteString]`
@@ -28,7 +33,7 @@ object Utf8Codec {
     * The stage is failed when upstream has failed.
     *
     */
-  val encode: GraphStageWithMaterializedValue[EncoderShape, EncoderMat] = Utf8Encode().toGraph
+  val encode: Graph[EncoderShape, EncoderMat] = Utf8Encode().toGraph
 
   /**
     * Shape: `FlowShape[ByteString, String]`
@@ -49,5 +54,9 @@ object Utf8Codec {
     * b) input bytes sequence cannot be decoded using UTF-8 encoding.
     *
     */
-  val decode: GraphStageWithMaterializedValue[DecoderShape, DecoderMat] = Utf8Decode().toGraph
+  val decode: Graph[DecoderShape, DecoderMat] =
+    Flow[ByteString]
+      .map(_.grouped(bytesPerChunk))
+      .mapConcat(_.toList)
+      .viaMat(Utf8Decode().toGraph)(Keep.right)
 }
