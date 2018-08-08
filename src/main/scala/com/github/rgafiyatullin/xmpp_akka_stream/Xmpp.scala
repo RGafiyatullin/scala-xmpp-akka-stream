@@ -19,27 +19,28 @@ object Xmpp {
   object plaintextXml {
     def upstreamHandmade: UpstreamTransport[NotUsed] =
       Flow[ByteString]
-        .via(Utf8Codec.decode)
-        .via(XmlEventCodec.decode)
-        .via(StreamEventCodec.decode)
+        .via(Utf8Codec.decode).log("Utf8Codec.decode")
+        .via(XmlEventCodec.decode).log("XmlEventCodec.decode")
+        .via(StreamEventCodec.decode).log("StreamEventCodec.decode")
         .named("Xmpp.plaintextXml.upstream")
 
     def upstreamAalto: UpstreamTransport[AaltoXmlEventDecode.MaterializedValue] =
       Flow[ByteString]
-        .viaMat(AaltoXmlEventDecode().toGraph)(Keep.right)
-        .via(StreamEventCodec.decode)
+        .viaMat(AaltoXmlEventDecode().toGraph)(Keep.right).log("AaltoXmlEventDecode")
+        .via(StreamEventCodec.decode).log("StreamEventCodec.decode")
         .named("Xmpp.plaintextXml.upstream")
 
     def upstream: UpstreamTransport[AaltoXmlEventDecode.MaterializedValue] =
       upstreamAalto
 
-    def downstream: DownstreamTransport[NotUsed] = downstream(dumpStreamErrorCause = false)
+    def downstream: DownstreamTransport[NotUsed] =
+      downstream(dumpStreamErrorCause = false)
 
     def downstream(dumpStreamErrorCause: Boolean): DownstreamTransport[NotUsed] =
       Flow[StreamEvent]
-        .via(StreamEventCodec.encode(dumpStreamErrorCause))
-        .via(XmlEventCodec.encode)
-        .via(Utf8Codec.encode)
+        .via(StreamEventCodec.encode(dumpStreamErrorCause)).log("StreamEventCodec.encode")
+        .via(XmlEventCodec.encode).log("XmlEventCodec.encode")
+        .via(Utf8Codec.encode).log("Utf8Codec.encode")
         .named("Xmpp.plaintextXml.downstream")
 
     def protocol: Protocol[NotUsed] =
